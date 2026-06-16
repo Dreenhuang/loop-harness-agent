@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Web Feature Evaluation Set",
+  "version": "1.0.0",
+  "description": "Web Feature 开发质量评估集",
+  "eval_cases": [
+    {
+      "id": "EVAL-001",
+      "name": "基础 CRUD 功能",
+      "type": "web-fullstack",
+      "difficulty": "easy",
+      "expected_artifacts": ["Product-Spec.md", "Architecture.md", "API-Spec.md", "DEV-PLAN.md", "Test-Report.md", "Release-Notes.md"],
+      "expected_evidence": ["failing_test", "passing_test", "verification_commands"],
+      "min_tdd_rate": 0.8,
+      "max_p95_ms": 300
+    },
+    {
+      "id": "EVAL-002",
+      "name": "用户认证与授权",
+      "type": "web-fullstack",
+      "difficulty": "medium",
+      "expected_artifacts": ["Product-Spec.md", "Architecture.md", "API-Spec.md", "DEV-PLAN.md", "Quality-Check-Report.md", "Test-Report.md", "Code-Review-Report.md", "Release-Notes.md"],
+      "expected_evidence": ["failing_test", "passing_test", "refactor_evidence", "verification_commands", "review_feedback"],
+      "min_tdd_rate": 0.8,
+      "max_p95_ms": 200
+    }
+  ],
+  "scoring": {
+    "code_quality_weight": 0.25,
+    "test_coverage_weight": 0.20,
+    "performance_weight": 0.15,
+    "security_weight": 0.15,
+    "ux_quality_weight": 0.10,
+    "artifact_completion_weight": 0.08,
+    "evidence_coverage_weight": 0.07
+  }
+}

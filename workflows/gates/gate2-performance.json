@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Gate 2 - 性能门禁",
+  "version": "1.0.0",
+  "description": "由 @Professional-Performance 全链路压测",
+
+  "gate_id": "GATE_2",
+  "gate_name": "性能门禁",
+  "loop_agent_version": "v1.0",
+
+  "agent": "professional_performance",
+  "skill": "gate2-performance",
+  "permission": "read_only",
+
+  "trigger": "GATE_1.passed",
+  "embedded_in_phase": "QUALITY_GATES",
+
+  "input_paths": [
+    "blackboard/code/backend/src/",
+    "blackboard/code/frontend/src/",
+    "blackboard/architecture/openapi.yaml"
+  ],
+  "output_path": "blackboard/performance/perf-<taskId>.json",
+
+  "sla": {
+    "api_response_p50_ms": 100,
+    "api_response_p95_ms": 300,
+    "api_response_p99_ms": 500,
+    "page_fcp_ms": 1000,
+    "page_lcp_ms": 2000,
+    "page_tti_ms": 3000,
+    "concurrent_users_min": 1000,
+    "throughput_tps_min": 1000,
+    "error_rate_max": 0.001,
+    "cpu_usage_max": 0.7,
+    "memory_usage_max": 0.8,
+    "db_slow_queries_max": 0
+  },
+
+  "test_stages": [
+    { "stage": "smoke",     "concurrent": 10,    "duration_min": 1 },
+    { "stage": "small",     "concurrent": 100,   "duration_min": 5 },
+    { "stage": "medium",    "concurrent": 500,   "duration_min": 5 },
+    { "stage": "target",    "concurrent": 1000,  "duration_min": 5 },
+    { "stage": "peak",      "concurrent": 1500,  "duration_min": 10 }
+  ],
+
+  "pass_criteria": "all_sla_met",
+
+  "fail_action": "→ bug_defect_repairer → 回到 DEVELOPMENT",
+
+  "max_attempts": 3,
+  "timeout_seconds": 1800
+}

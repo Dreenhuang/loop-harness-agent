@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Phase REQUIREMENTS - 需求基线",
+  "version": "1.0.0",
+  "description": "PM 决策 + 需求细化 + 基线冻结",
+
+  "phase": "REQUIREMENTS",
+  "order": 2,
+  "loop_agent_version": "v1.0",
+
+  "entry_conditions": ["INIT.completed"],
+
+  "tasks": [
+    {
+      "id": "T1-1",
+      "agent": "product_manager",
+      "action": "product_planning",
+      "input": ["blackboard/input/prd.md"],
+      "output": "blackboard/requirements/product-decision.md",
+      "dependencies": []
+    },
+    {
+      "id": "T1-2",
+      "agent": "requirements",
+      "action": "prd_creation",
+      "input": ["blackboard/requirements/product-decision.md"],
+      "output": "blackboard/requirements/prd-v1.0.md",
+      "dependencies": ["T1-1"]
+    },
+    {
+      "id": "T1-3",
+      "agent": "requirements",
+      "action": "acceptance_matrix",
+      "input": ["blackboard/requirements/prd-v1.0.md"],
+      "output": "blackboard/requirements/acceptance-matrix.md",
+      "dependencies": ["T1-2"]
+    },
+    {
+      "id": "T1-4",
+      "agent": "requirements",
+      "action": "use_cases",
+      "input": ["blackboard/requirements/prd-v1.0.md"],
+      "output": "blackboard/requirements/use-cases.json",
+      "dependencies": ["T1-2"]
+    },
+    {
+      "id": "T1-5",
+      "agent": "requirements",
+      "action": "baseline_freeze",
+      "input": ["blackboard/requirements/prd-v1.0.md", "blackboard/requirements/acceptance-matrix.md", "blackboard/requirements/use-cases.json"],
+      "output": "blackboard/requirements/baseline-v1.0.json",
+      "dependencies": ["T1-2", "T1-3", "T1-4"]
+    }
+  ],
+
+  "exit_gate": "requirements_baseline_frozen",
+  "ambiguity_check": "all_requirements_testable AND no_ambiguity",
+
+  "budget": { "cost_usd": 5, "iterations": 10 },
+
+  "prev_phase": "INIT",
+  "next_phase": "DESIGN"
+}

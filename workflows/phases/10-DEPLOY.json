@@ -1,0 +1,74 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Phase DEPLOY - 部署上线",
+  "version": "1.0.0",
+  "description": "Docker 镜像 + CI/CD + 灰度发布 + 监控 + 24h 监控",
+
+  "phase": "DEPLOY",
+  "order": 10,
+  "loop_agent_version": "v1.0",
+
+  "entry_conditions": ["FINAL_REVIEW.decision == GO OR CONDITIONAL_GO"],
+
+  "tasks": [
+    {
+      "id": "T10-1",
+      "agent": "devops",
+      "action": "build_docker",
+      "input": ["blackboard/code/backend/src/", "blackboard/code/frontend/src/", "blackboard/architecture/tech-stack.md"],
+      "output": "docker-images/",
+      "dependencies": []
+    },
+    {
+      "id": "T10-2",
+      "agent": "devops",
+      "action": "configure_cicd",
+      "input": ["docker-images/", "blackboard/architecture/modules.md"],
+      "output": "cicd/",
+      "dependencies": ["T10-1"]
+    },
+    {
+      "id": "T10-3",
+      "agent": "devops",
+      "action": "canary_deploy",
+      "input": ["cicd/"],
+      "output": "deployment-log/canary.json",
+      "canary_stages": ["10%", "50%", "100%"],
+      "dependencies": ["T10-2"]
+    },
+    {
+      "id": "T10-4",
+      "agent": "devops",
+      "action": "configure_monitoring",
+      "input": ["blackboard/architecture/tech-stack.md"],
+      "output": "monitoring/",
+      "metrics": ["error_rate", "p95_response_time", "cpu_usage", "memory_usage", "db_slow_queries"],
+      "dependencies": ["T10-3"]
+    },
+    {
+      "id": "T10-5",
+      "agent": "devops",
+      "action": "24h_monitor",
+      "input": ["monitoring/"],
+      "output": "deployment-log/24h-stable.json",
+      "duration_hours": 24,
+      "dependencies": ["T10-4"]
+    }
+  ],
+
+  "exit_gate": "production_24h_stable AND rollback_plan_tested",
+
+  "budget": { "cost_usd": 2, "iterations": 5 },
+
+  "prev_phase": "FINAL_REVIEW",
+  "next_phase": "DONE",
+
+  "post_deploy": {
+    "monitoring_duration_hours": 24,
+    "rollback_triggers": [
+      "error_rate > 0.1% for 5min",
+      "p95_response_time > 500ms for 5min",
+      "any_p0_user_feedback"
+    ]
+  }
+}

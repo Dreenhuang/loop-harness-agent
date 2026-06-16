@@ -1,0 +1,121 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Web Feature Development Domain Chip",
+  "version": "1.1.0",
+  "description": "Web 功能开发领域芯片（Trae Solo 对齐版 v1.1）。对外暴露「输入 PRD → 输出生产代码」黑盒接口，内部全自动化。",
+  "loop_agent_version": "v1.0",
+  "trae_solo_alignment": "v1.1",
+  "autoloop_enabled": true,
+
+  "upgrade_notes": {
+    "from": "v1.0",
+    "to": "v1.1",
+    "date": "2026-06-15",
+    "changes": [
+      "添加 trae_solo_alignment 字段",
+      "internal_composition 路径更新",
+      "guardrails 与 quality_gates 同步对齐"
+    ]
+  },
+
+  "exposed_interface": {
+    "input_contract": {
+      "type": "object",
+      "required": ["prd_path"],
+      "properties": {
+        "prd_path": { "type": "string", "description": "PRD 文档路径" },
+        "tech_stack_preference": { "type": "string", "description": "可选技术栈偏好" },
+        "deploy_target": { "type": "string", "enum": ["cloudbase", "vercel", "self-host"] }
+      }
+    },
+    "output_contract": {
+      "type": "object",
+      "required": ["code", "docs", "reports"],
+      "properties": {
+        "code": { "type": "string", "description": "生产代码路径" },
+        "docs": { "type": "string", "description": "完整文档路径" },
+        "reports": {
+          "type": "object",
+          "properties": {
+            "code_review": { "type": "string" },
+            "performance": { "type": "string" },
+            "testing": { "type": "string" },
+            "final_review": { "type": "string" }
+          }
+        },
+        "knowledge_entries": { "type": "array" }
+      }
+    }
+  },
+
+  "internal_composition": {
+    "main_config": "../../trae.toml",
+    "workflow_main_blueprint": "../../.trae/workflows/prd-to-production.json",
+    "workflow_phases_dir": "../../workflows/phases/",
+    "workflow_gates_dir": "../../workflows/gates/",
+    "agent_profiles_dir": "../../.trae/agents/",
+    "agent_profiles_yaml": "../../config/agents.yaml",
+    "skills_dir": "../../.trae/skills/",
+    "mcp_servers_dir": "../../mcp/",
+    "config_dir": "../../config/",
+    "scripts_dir": "../../scripts/",
+    "knowledge_base": "./knowledge/",
+    "benchmark": "./benchmark/"
+  },
+
+  "knowledge_base": {
+    "problem_solutions": "./knowledge/problems/",
+    "architecture_decisions": "./knowledge/architectures/",
+    "reusable_components": "./knowledge/components/",
+    "best_practices": "./knowledge/best-practices/",
+    "pitfalls": "./knowledge/pitfalls/"
+  },
+
+  "benchmark": {
+    "enabled": true,
+    "eval_set_path": "./benchmark/eval-set.json",
+    "scoring_metrics": [
+      "code_quality_score",
+      "test_coverage_percent",
+      "performance_p95_ms",
+      "security_score",
+      "ux_quality_score"
+    ],
+    "auto_loop": {
+      "enabled": true,
+      "mutation_rate": 0.1,
+      "selection_criteria": "scoring >= previous_score",
+      "rollback_on_regression": true
+    }
+  },
+
+  "autoloop": {
+    "description": "自进化循环。Loop 不只是重复，还能基于 benchmark 自我改进。",
+    "stages": [
+      "1. 标准化工作流：Loop 形状稳定才能改进",
+      "2. 评估基准：定义可度量的成功标准",
+      "3. 变异探索：在 Skills / Workflow / Prompts 上做小范围变异",
+      "4. 评分对比：基于 benchmark 对比新旧版本",
+      "5. 优胜劣汰：赢了保留，输了回滚"
+    ],
+    "guardrails": [
+      "变异限幅：每次最多 5% 改动",
+      "回滚记录：所有版本可回滚",
+      "证据门控：必须有量化数据才能保留"
+    ]
+  },
+
+  "guardrails": {
+    "max_budget_per_run_usd": 100.0,
+    "max_iterations_per_run": 200,
+    "require_human_approval_for": [
+      "production_deploy",
+      "rollback_decision",
+      "budget_increase"
+    ]
+  },
+
+  "tags": ["web", "fullstack", "production", "autoloop", "loop-agent-v1", "trae-solo-aligned"],
+  "applicability": "通用 Web 功能开发（前后端 + 部署）",
+  "replaces": null
+}

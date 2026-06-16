@@ -1,0 +1,27 @@
+{
+  "loopId": null,
+  "phase": "INIT",
+  "status": "not_started",
+  "tasks": {},
+  "dependencies": {},
+  "budget": {
+    "maxCost": 100,
+    "currentCost": 0,
+    "maxIterations": 200,
+    "currentIteration": 0,
+    "maxAttemptsPerTask": 3,
+    "noProgressThreshold": 3,
+    "noProgressCount": 0
+  },
+  "qualityGates": {
+    "codeReview": "NOT_STARTED",
+    "performance": "NOT_STARTED",
+    "testing": "NOT_STARTED",
+    "final": "NOT_STARTED"
+  },
+  "startedAt": "2026-06-16T02:15:54.912Z",
+  "updatedAt": "2026-06-16T02:15:54.913Z",
+  "projectName": "untitled",
+  "prdPath": null,
+  "mode": "closed"
+}

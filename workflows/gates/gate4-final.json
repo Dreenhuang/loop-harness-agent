@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Gate 4 - 最终终审门禁",
+  "version": "1.0.0",
+  "description": "由 @Final-Reviewer 全流程综合核验 + 风险评估 + 上线决策",
+
+  "gate_id": "GATE_4",
+  "gate_name": "最终终审门禁",
+  "loop_agent_version": "v1.0",
+
+  "agent": "final_reviewer",
+  "skill": "gate4-final",
+  "permission": "read_only",
+
+  "trigger": "DOCUMENTATION.completed",
+  "embedded_in_phase": "FINAL_REVIEW",
+
+  "input_paths": [
+    "blackboard/state.json",
+    "blackboard/requirements/baseline-v1.0.json",
+    "blackboard/code/",
+    "blackboard/performance/",
+    "blackboard/test_reports/",
+    "blackboard/knowledge/",
+    "docs/"
+  ],
+  "output_path": "blackboard/final_review/review-final.json",
+
+  "checklist_12_items": [
+    "gate1_passed",
+    "gate2_passed",
+    "gate3_passed",
+    "no_open_p0_p1_bugs",
+    "prd_documented",
+    "architecture_documented",
+    "api_documented",
+    "deploy_documented",
+    "rollback_tested",
+    "monitoring_configured",
+    "backup_verified",
+    "release_plan_approved"
+  ],
+
+  "risk_decision_matrix": {
+    "LOW": "GO",
+    "MEDIUM": "CONDITIONAL_GO",
+    "HIGH": "NO_GO",
+    "CRITICAL": "STOP"
+  },
+
+  "post_deploy_requirements": {
+    "monitoring_duration_hours": 24,
+    "monitoring_metrics": [
+      "error_rate <= 0.1%",
+      "p95_response_time <= 500ms",
+      "no_p0_user_feedback"
+    ]
+  },
+
+  "pass_criteria": "decision IN ['GO', 'CONDITIONAL_GO']",
+
+  "fail_action": "→ 回到对应 Phase 修复",
+
+  "max_attempts": 1,
+  "timeout_seconds": 1800
+}

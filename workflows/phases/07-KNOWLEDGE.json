@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Phase KNOWLEDGE - 知识沉淀",
+  "version": "1.0.0",
+  "description": "从全流程产出自动提取经验，按 6 段式模板沉淀",
+
+  "phase": "KNOWLEDGE",
+  "order": 7,
+  "loop_agent_version": "v1.0",
+
+  "entry_conditions": ["QUALITY_GATES.completed"],
+
+  "tasks": [
+    {
+      "id": "T7-1",
+      "agent": "knowledge_curator",
+      "action": "extract_lessons",
+      "input": [
+        "blackboard/requirements/baseline-v1.0.json",
+        "blackboard/code/backend/src/",
+        "blackboard/code/frontend/src/",
+        "blackboard/performance/perf-report.json",
+        "blackboard/test_reports/test-report.json",
+        "blackboard/bugs/"
+      ],
+      "output": "docs/knowledge/lessons.md",
+      "dependencies": []
+    },
+    {
+      "id": "T7-2",
+      "agent": "knowledge_curator",
+      "action": "update_kb",
+      "input": ["docs/knowledge/lessons.md"],
+      "output": "blackboard/knowledge_index.json",
+      "dependencies": ["T7-1"]
+    },
+    {
+      "id": "T7-3",
+      "agent": "knowledge_curator",
+      "action": "auto_match_check",
+      "input": ["blackboard/knowledge_index.json"],
+      "output": "knowledge_match_results.json",
+      "dependencies": ["T7-2"]
+    }
+  ],
+
+  "exit_gate": "all_experiences_indexed",
+
+  "budget": { "cost_usd": 5, "iterations": 10 },
+
+  "prev_phase": "QUALITY_GATES",
+  "next_phase": "DOCUMENTATION"
+}

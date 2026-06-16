@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Phase FINAL_REVIEW - 最终终审（Gate 4）",
+  "version": "1.0.0",
+  "description": "全流程综合核验 + 风险评估 + 上线决策",
+
+  "phase": "FINAL_REVIEW",
+  "order": 9,
+  "loop_agent_version": "v1.0",
+
+  "entry_conditions": ["DOCUMENTATION.completed"],
+
+  "tasks": [
+    {
+      "id": "T9-1",
+      "agent": "final_reviewer",
+      "action": "final_review",
+      "skill": "gate4-final",
+      "input": [
+        "blackboard/state.json",
+        "blackboard/requirements/baseline-v1.0.json",
+        "blackboard/code/backend/src/",
+        "blackboard/code/frontend/src/",
+        "blackboard/performance/perf-report.json",
+        "blackboard/test_reports/test-report.json",
+        "docs/"
+      ],
+      "output": "blackboard/final_review/review-final.json",
+      "dependencies": []
+    }
+  ],
+
+  "exit_gate": "final_decision == GO OR CONDITIONAL_GO",
+
+  "budget": { "cost_usd": 3, "iterations": 5 },
+
+  "prev_phase": "DOCUMENTATION",
+  "next_phase": "DEPLOY",
+
+  "internal_gate": "gate4_final"
+}

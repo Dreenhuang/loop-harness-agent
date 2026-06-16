@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Phase INIT - 初始化",
+  "version": "1.0.0",
+  "description": "Loop Agent 启动初始化阶段：建黑板 + 加载资产 + 验证环境",
+
+  "phase": "INIT",
+  "order": 1,
+  "loop_agent_version": "v1.0",
+
+  "entry_conditions": ["loop_agent_triggered"],
+
+  "tasks": [
+    {
+      "id": "T0-1",
+      "agent": "orchestrator",
+      "action": "load_blackboard",
+      "input": ["blackboard/state.json", "项目进度记录.md"],
+      "output": "progress_summary",
+      "dependencies": []
+    },
+    {
+      "id": "T0-2",
+      "agent": "orchestrator",
+      "action": "load_skills",
+      "input": [".trae/skills/"],
+      "output": "skills_loaded",
+      "dependencies": []
+    },
+    {
+      "id": "T0-3",
+      "agent": "orchestrator",
+      "action": "load_agents",
+      "input": ["config/agents.yaml", ".trae/agents/"],
+      "output": "agents_loaded",
+      "dependencies": []
+    },
+    {
+      "id": "T0-4",
+      "agent": "orchestrator",
+      "action": "load_workflow",
+      "input": ["workflows/prd-to-production.json"],
+      "output": "workflow_loaded",
+      "dependencies": []
+    },
+    {
+      "id": "T0-5",
+      "agent": "orchestrator",
+      "action": "create_snapshot",
+      "input": "CP-000",
+      "output": "blackboard/.snapshots/CP-000.json",
+      "dependencies": ["T0-1", "T0-2", "T0-3", "T0-4"]
+    },
+    {
+      "id": "T0-6",
+      "agent": "orchestrator",
+      "action": "load_mcp_servers",
+      "input": ["mcp/"],
+      "output": "mcp_servers_loaded",
+      "dependencies": []
+    }
+  ],
+
+  "exit_gate": "all_assets_loaded",
+
+  "budget": { "cost_usd": 1, "iterations": 2 },
+
+  "next_phase": "REQUIREMENTS"
+}
