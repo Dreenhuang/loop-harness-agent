@@ -237,3 +237,11 @@ async def websocket_endpoint(websocket: WebSocket):
         logger.error(f"WS Error for client {conn_id}: {e}")
     finally:
         await manager.disconnect(conn_id)
+
+
+# Create WebSocket router for FastAPI
+from fastapi import APIRouter
+
+websocket_router = APIRouter()
+websocket_router.add_api_websocket_route("/ws", websocket_endpoint)
+

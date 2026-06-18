@@ -123,8 +123,6 @@ class DataCollectorService:
             db.add(project)
             db.commit()
             return project.to_dict()
-        finally:
-            db.close()
 
     def _update_agent_status(self, db, agent_id: str, new_status: str):
         """Update agent status in database."""

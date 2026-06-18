@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
 
+from app.config import settings
 from app.core.database import init_db
 from app.core.scheduler import start_scheduler, stop_scheduler
 from app.api.router import api_router
@@ -91,4 +92,4 @@ async def readiness_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app.main:app, host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
