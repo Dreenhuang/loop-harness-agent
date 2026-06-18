@@ -1,0 +1,77 @@
+/* LogEntry Styles */
+
+.log-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  border-bottom: 1px solid #F5F5F5;
+  transition: background-color 150ms ease;
+}
+
+.log-entry:hover {
+  background-color: #FAFAFA;
+}
+
+/* Timestamp */
+.log-timestamp {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  color: #8C8C8C;
+  font-size: 12px;
+  white-space: nowrap;
+  min-width: 120px;
+}
+
+/* Agent ID */
+.log-agent {
+  font-weight: 500;
+  color: #1677FF;
+  cursor: pointer;
+  white-space: nowrap;
+  min-width: 100px;
+}
+
+.log-agent:hover {
+  text-decoration: underline;
+}
+
+/* Level Badge */
+.log-level {
+  font-weight: 500;
+  font-size: 11px;
+  padding: 0 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.level-debug {
+  color: #8C8C8C;
+  background-color: transparent;
+}
+
+.level-info {
+  color: #262626;
+  background-color: transparent;
+}
+
+.level-warn {
+  color: #D48806;
+  background-color: #FFF7E6;
+}
+
+.level-error {
+  color: #CF1322;
+  background-color: #FFF2F0;
+  border-left: 3px solid #FF4D4F;
+  margin-left: -4px;
+  padding-left: 8px;
+}
+
+/* Message */
+.log-message {
+  color: #262626;
+  word-break: break-word;
+  flex: 1;
+}

@@ -1,0 +1,235 @@
+/* Dashboard Page Styles */
+
+.dashboard {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #F5F5F5;
+}
+
+/* Header */
+.dashboard-header {
+  height: 56px;
+  background: #FFFFFF;
+  border-bottom: 1px solid #E8E8E8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  font-size: 24px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  color: #262626;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.settings-icon {
+  cursor: pointer;
+  color: #8C8C8C;
+}
+
+.settings-icon:hover {
+  color: #1677FF;
+}
+
+/* Main Content */
+.dashboard-main {
+  flex: 1;
+  padding: 16px 24px;
+  max-width: 1600px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.section-card {
+  margin-bottom: 16px;
+  border-radius: 8px;
+}
+
+.section-card .ant-card-head-title {
+  font-weight: 600;
+}
+
+/* Agent Grid */
+.agent-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 1200px) {
+  .agent-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .agent-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .agent-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Log Container */
+.log-container {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #F0F0F0;
+  border-radius: 6px;
+  background: #FAFAFA;
+}
+
+.log-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.log-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.log-container::-webkit-scrollbar-thumb {
+  background: #D9D9D9;
+  border-radius: 3px;
+}
+
+.log-container::-webkit-scrollbar-thumb:hover {
+  background: #BFBFBF;
+}
+
+.empty-logs {
+  text-align: center;
+  padding: 48px 24px;
+  color: #8C8C8C;
+}
+
+.empty-logs p:first-child {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.empty-logs .hint {
+  font-size: 13px;
+  color: #BFBFBF;
+}
+
+/* Gate Status */
+.gate-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #F0F0F0;
+}
+
+.gate-label {
+  font-weight: 500;
+  color: #595959;
+}
+
+/* Progress Panel */
+.progress-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.progress-item {
+  padding: 8px 0;
+}
+
+.progress-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.progress-item-header .agent-name {
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.progress-percent {
+  font-weight: 600;
+  color: #1677FF;
+  font-size: 13px;
+}
+
+.task-name-hint {
+  font-size: 11px;
+  color: #BFBFBF;
+  display: block;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.empty-progress {
+  text-align: center;
+  padding: 24px;
+  color: #BFBFBF;
+}
+
+/* Footer */
+.dashboard-footer {
+  height: 28px;
+  background: #FFFFFF;
+  border-top: 1px solid #E8E8E8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  font-size: 12px;
+  color: #8C8C8C;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .dashboard-header {
+    padding: 0 12px;
+    height: auto;
+    min-height: 48px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .dashboard-main {
+    padding: 12px;
+  }
+
+  .header-left .title {
+    font-size: 14px;
+  }
+
+  .header-right {
+    gap: 8px;
+  }
+}
