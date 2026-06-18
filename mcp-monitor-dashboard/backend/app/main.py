@@ -25,15 +25,17 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan handler - startup and shutdown events."""
     # Startup
-    logger.info("🚀 Starting MCP Monitor Dashboard...")
+    logger.info("Starting MCP Monitor Dashboard...")
     await init_db()
     start_scheduler()
-    logger.info("✅ MCP Monitor Dashboard started successfully")
+    await manager.start_heartbeat()  # Start WebSocket heartbeat
+    logger.info("MCP Monitor Dashboard started successfully")
     yield
     # Shutdown
-    logger.info("🛑 Shutting down MCP Monitor Dashboard...")
+    logger.info("Shutting down MCP Monitor Dashboard...")
+    await manager.stop_heartbeat()  # Stop WebSocket heartbeat
     stop_scheduler()
-    logger.info("👋 MCP Monitor Dashboard stopped")
+    logger.info("MCP Monitor Dashboard stopped")
 
 
 app = FastAPI(
@@ -43,12 +45,29 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS middleware - configure for production
+# CORS middleware - environment-aware configuration
+_cors_origins = [
+    "http://localhost:5173",   # Vite dev server
+    "http://localhost:3000",   # Alternative frontend port
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+]
+# Add production origins from env if configured
+import os
+if _prod_origins := os.getenv("CORS_ORIGINS"):
+    _cors_origins.extend([o.strip() for o in _prod_origins.split(",")])
+
+# In development, allow all; in production, restrict strictly
+if settings.app_env == "production":
+    _allowed_origins = _cors_origins
+else:
+    _allowed_origins = ["*"]  # Dev only
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Restrict in production
+    allow_origins=_allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 

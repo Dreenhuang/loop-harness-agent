@@ -88,36 +88,19 @@ class DataCollectorService:
 
     def _collect_agent_statuses(self) -> List[Dict]:
         """Collect current status of all agents."""
-        db = SessionLocal()
-        try:
+        with SessionLocal() as db:
             agents = db.query(Agent).all()
             result = []
             for agent in agents:
                 agent_dict = agent.to_dict()
-
-                # Simulate real-time status (in production, read from MCP)
-                # For MVP, we'll use mock data that simulates activity
-                if agent.status == "running":
-                    # Simulate progress increment
-                    if agent.current_task_progress is not None:
-                        agent_dict["current_task_progress"] = min(
-                            100.0, agent.current_task_progress + 0.5
-                        )
-                        # Auto-complete at 100%
-                        if agent_dict["current_task_progress"] >= 100.0:
-                            agent_dict["status"] = "complete"
-                            self._update_agent_status(db, agent.id, "complete")
-
+                # Return agent data as-is from database
+                # Status/progress updates come from external MCP system via API calls
                 result.append(agent_dict)
-
             return result
-        finally:
-            db.close()
 
     def _collect_project_overview(self) -> Dict:
         """Collect project overview statistics."""
-        db = SessionLocal()
-        try:
+        with SessionLocal() as db:
             project = db.query(Project).filter_by(name="MCP 实时监控看板系统").first()
             if project:
                 return project.to_dict()

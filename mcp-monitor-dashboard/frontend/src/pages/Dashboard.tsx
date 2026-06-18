@@ -73,15 +73,24 @@ const Dashboard: React.FC = () => {
     },
   });
 
-  // Handle incoming WebSocket messages
+  // Handle incoming WebSocket messages with data validation
   function handleWSMessage(msg: WSMessage) {
+    // Validate message has required fields
+    if (!msg.type || typeof msg.type !== 'string') {
+      console.warn('Invalid WS message: missing type');
+      return;
+    }
+
     switch (msg.type) {
       case 'init':
         // Initial data load
         if (Array.isArray(msg.data?.agents)) {
-          setAgents(msg.data.agents as Agent[]);
+          const validAgents = msg.data.agents.filter(
+            (a: unknown) => a && typeof a === 'object' && 'id' in a && 'status' in a
+          );
+          setAgents(validAgents as Agent[]);
         }
-        if (msg.data?.overview) {
+        if (msg.data?.overview && typeof msg.data.overview === 'object') {
           setOverview(msg.data.overview as ProjectOverview);
         }
         break;
@@ -89,19 +98,21 @@ const Dashboard: React.FC = () => {
       case 'agent_status_update':
         if (Array.isArray(msg.data)) {
           msg.data.forEach((agent: Agent) => {
-            updateAgent(agent.id, agent);
+            if (agent?.id && agent?.status) {
+              updateAgent(agent.id, agent);
+            }
           });
         }
         break;
 
       case 'project_overview_update':
-        if (msg.data) {
+        if (msg.data && typeof msg.data === 'object' && 'name' in msg.data) {
           setOverview(msg.data as ProjectOverview);
         }
         break;
 
       case 'log_entry':
-        if (msg.data) {
+        if (msg.data && typeof msg.data === 'object' && 'id' in msg.data && 'message' in msg.data) {
           prependLog(msg.data as LogEntry);
           scrollToBottomIfNear();
         }

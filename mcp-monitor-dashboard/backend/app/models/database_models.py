@@ -5,6 +5,7 @@ SQLAlchemy ORM models for database tables
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, Index
 from sqlalchemy.orm import relationship
 from datetime import datetime
+import json
 
 from app.core.database import Base
 
@@ -77,7 +78,7 @@ class Log(Base):
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
             "level": self.level,
             "message": self.message,
-            "metadata": self.metadata_json if isinstance(self.metadata_json, dict) else {},
+            "metadata": json.loads(self.metadata_json) if isinstance(self.metadata_json, str) else (self.metadata_json or {}),
         }
 
 

@@ -6,6 +6,7 @@ import subprocess
 import signal
 import logging
 import time
+import shlex
 from typing import Optional
 
 from app.config import settings
@@ -40,6 +41,21 @@ class ProcessManagerService:
             return 0
         return int(time.time() - self._start_time)
 
+    def _parse_command(self, cmd: str) -> list:
+        """Safely parse command string into argument list using shlex."""
+        try:
+            parsed = shlex.split(cmd)
+            if not parsed:
+                raise ValueError("Empty command after parsing")
+            # Basic safety check: reject suspicious patterns
+            for arg in parsed:
+                if any(dangerous in arg for dangerous in [';', '&', '|', '$(', '`', '>', '<']):
+                    logger.warning(f"⚠️ Potentially dangerous command pattern detected in: {arg}")
+            return parsed
+        except ValueError as e:
+            logger.error(f"❌ Failed to parse command '{cmd}': {e}")
+            raise
+
     def start(self) -> dict:
         """Start MCP Server process."""
         if self.is_running:
@@ -50,13 +66,15 @@ class ProcessManagerService:
             }
 
         try:
-            logger.info(f"🚀 Starting MCP Server: {settings.mcp_server_cmd}")
+            cmd_str = settings.mcp_server_cmd
+            logger.info(f"🚀 Starting MCP Server: {cmd_str}")
 
-            # Start the process
+            # Safely parse and execute command (never use shell=True)
+            cmd_args = self._parse_command(cmd_str)
             cwd = settings.mcp_server_cwd or "."
             self._process = subprocess.Popen(
-                settings.mcp_server_cmd.split(),
-                shell=True if " " in settings.mcp_server_cmd else False,
+                cmd_args,
+                shell=False,  # Always shell=False for security
                 cwd=cwd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,

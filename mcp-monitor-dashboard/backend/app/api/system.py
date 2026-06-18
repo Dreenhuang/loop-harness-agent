@@ -57,7 +57,7 @@ async def get_system_status():
             "monitor_system": {
                 "version": "1.0.0",
                 "websocket_connections": manager.connection_count,
-                "uptime_seconds": 7200,
+                "uptime_seconds": process_manager.uptime_seconds,
             },
         },
     }

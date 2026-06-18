@@ -3,7 +3,7 @@ Database connection and initialization
 """
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 import os
 import logging
 
@@ -32,10 +32,12 @@ async def init_db():
 
     from sqlalchemy import create_engine
     engine = create_engine(DATABASE_URL, echo=settings.app_debug)
-    SessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False)
+    # Use sync sessionmaker for sync SQLite engine
+    from sqlalchemy.orm import sessionmaker as _sync_sessionmaker
+    SessionLocal = _sync_sessionmaker(bind=engine, expire_on_commit=False)
 
     # Import all models to register them with Base
-    from app.models import agent, log, project, alert  # noqa: F401
+    from app.models.database_models import Agent, Log, Project  # noqa: F401
 
     # Create tables
     Base.metadata.create_all(engine)

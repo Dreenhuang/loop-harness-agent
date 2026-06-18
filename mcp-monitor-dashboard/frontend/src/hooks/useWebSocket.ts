@@ -7,6 +7,8 @@ import type { WSMessage, WSSubscribeRequest } from '@/types';
 
 const WS_URL = import.meta.env.VITE_WS_URL || `ws://${window.location.host}/ws`;
 
+const MAX_RECONNECT_ATTEMPTS = 10;
+
 interface UseWebSocketOptions {
   onMessage?: (message: WSMessage) => void;
   onOpen?: () => void;
@@ -75,6 +77,14 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const scheduleReconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) return;
 
+    // Check max reconnect limit
+    if (retryCountRef.current >= MAX_RECONNECT_ATTEMPTS) {
+      console.error(`WebSocket reconnection failed after ${MAX_RECONNECT_ATTEMPTS} attempts. Giving up.`);
+      setIsReconnecting(false);
+      onError?.(new Event('reconnect_max_exceeded'));
+      return;
+    }
+
     setIsReconnecting(true);
 
     const delay = Math.min(
@@ -82,14 +92,14 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       30000
     );
 
-    console.log(`🔄 Reconnecting in ${delay}ms (attempt ${retryCountRef.current + 1})`);
+    console.log(`Reconnecting in ${delay}ms (attempt ${retryCountRef.current + 1}/${MAX_RECONNECT_ATTEMPTS})`);
 
     reconnectTimeoutRef.current = window.setTimeout(() => {
       reconnectTimeoutRef.current = null;
       retryCountRef.current += 1;
       connect();
     }, delay);
-  }, [connect]);
+  }, [connect, onError]);
 
   // Send message
   const send = useCallback((data: unknown) => {

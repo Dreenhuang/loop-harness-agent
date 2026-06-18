@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     ws_max_connections: int = 100
 
     # Data Collection
-    collection_interval_seconds: float = 2.0
+    collection_interval_seconds: float = 2.0  # Min: 0.5s, Max: 60s
 
     # Logging
     log_level: str = "INFO"
