@@ -1,0 +1,80 @@
+# =============================================================================
+# Loop Agent · 质量标准配置
+# =============================================================================
+# 版本：v1.0
+# 生效日期：2026-06-15
+# 对齐：Trae Solo 工程实现指南 第六章
+# =============================================================================
+
+version: "1.0"
+loop_agent_version: "v1.0"
+
+# Gate 1: 代码质量
+gate1_code_review:
+  thresholds:
+    build_errors: 0                    # B1
+    security_critical: 0               # B2
+    sql_injection_risks: 0             # B3
+    xss_risks: 0                       # B4
+    hardcoded_secrets: 0               # B5
+    typescript_errors: 0               # B6
+    test_failures: 0                   # B7
+    test_coverage_min: 80              # M1
+    code_duplication_max: 3            # M2
+    cyclomatic_complexity_max: 10      # M3
+    function_lines_max: 50             # M4
+    file_lines_max: 300                # M5
+  pass_condition: "all_blocker_pass AND all_major_pass"
+
+# Gate 2: 性能
+gate2_performance:
+  sla:
+    api_response_p50_ms: 100
+    api_response_p95_ms: 300
+    api_response_p99_ms: 500
+    page_fcp_ms: 1000
+    page_lcp_ms: 2000
+    page_tti_ms: 3000
+    concurrent_users_min: 1000
+    throughput_tps_min: 1000
+    error_rate_max: 0.001              # 0.1%
+    cpu_usage_max: 0.7
+    memory_usage_max: 0.8
+    db_slow_queries_max: 0
+  pass_condition: "all_sla_met"
+
+# Gate 3: 全栈测试
+gate3_testing:
+  thresholds:
+    p0_bugs_max: 0
+    p1_bugs_max: 0
+    p2_bugs_max: 3
+    p3_bugs_max: 999
+    core_business_coverage_min: 100
+    api_coverage_min: 100
+    security_passed: true
+    compatibility_passed: true
+  pass_condition: "p0 == 0 AND p1 == 0 AND p2 <= 3"
+
+# Gate 4: 最终终审
+gate4_final:
+  checklist:
+    - "gate1_passed"
+    - "gate2_passed"
+    - "gate3_passed"
+    - "no_open_p0_p1_bugs"
+    - "prd_documented"
+    - "architecture_documented"
+    - "api_documented"
+    - "deploy_documented"
+    - "rollback_tested"
+    - "monitoring_configured"
+    - "backup_verified"
+    - "release_plan_approved"
+    - "pm_accepted"
+    - "knowledge_curated"
+  risk_levels:
+    LOW: "GO"
+    MEDIUM: "CONDITIONAL_GO"
+    HIGH: "NO_GO"
+    CRITICAL: "STOP"

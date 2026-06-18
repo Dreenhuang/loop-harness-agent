@@ -1,0 +1,84 @@
+# /loop-agent 斜杠命令配置
+# Loop Agent 模式 v1.0
+# Trae IDE 斜杠命令定义
+
+[command]
+name = "loop-agent"
+description = "Loop Agent 模式入口。启动 PRD→生产 全链路自动化开发。"
+version = "1.0.0"
+
+# 子命令
+[subcommands]
+
+  [subcommands.default]
+  description = "默认行为：启动 Loop Agent"
+  action = "load_blackboard → load_assets → switch_to_orchestrator"
+
+  [subcommands.status]
+  description = "查询当前 Loop Agent 状态"
+  action = "read 项目进度记录.md → output 进度总结"
+
+  [subcommands.resume]
+  description = "接续上次未完成 Loop"
+  action = "load_state_snapshot → resume_from_checkpoint"
+
+  [subcommands.abort]
+  description = "中止当前 Loop"
+  action = "save_state → mark_aborted → notify_user"
+
+  [subcommands.feedback]
+  description = "提交反馈"
+  action = "collect_feedback → append_to_evolution_log"
+  args = ["<问题描述>"]
+
+  [subcommands.chip]
+  description = "运行 Domain Chip"
+  action = "load_chip.json → execute_chip_pipeline"
+  args = ["<chip_name>", "--prd <path>"]
+
+  [subcommands.gate]
+  description = "手动触发质量门禁"
+  action = "select_gate → execute_gate_skill"
+  args = ["<gate_id: 1-4>"]
+
+# 触发关键词（与自然语言触发共用）
+[triggers]
+slash = ["/loop-agent"]
+natural_language = [
+  "用 Loop Agent 模式开发",
+  "用 Loop Agent 开发",
+  "启动 Loop Agent",
+  "按 Loop Engineering 流程做",
+  "按 PRD→生产 流水线做",
+  "全自动化开发",
+  "按 16 角色团队开发",
+  "按照 Agent Loop 模式",
+  "Loop 模式启动",
+  "走 Loop Agent 流程",
+  "用循环工程开发",
+  "用 Harness Engineering 模式"
+]
+
+# 触发后的执行流程
+[execution_flow]
+steps = [
+  "1. 解析触发源（斜杠命令 / 自然语言 / 子命令参数）",
+  "2. 加载 .trae/rules/loop-agent.md",
+  "3. 读取 <项目根>/项目进度记录.md（如不存在则提示初始化）",
+  "4. 加载 4 级封装资产：",
+  "   - .trae/skills/ （10 个 Skill）",
+  "   - .trae/agents/ （16 个 Agent Profile）",
+  "   - .trae/workflows/prd-to-production.json",
+  "   - domain-chips/ （Web Feature Chip）",
+  "5. 加载 A2A 协议：A2A消息速查卡.md",
+  "6. 切换到 @Orchestrator 视角",
+  "7. 输出 'Loop Agent 模式已激活' + 当前状态",
+  "8. 列出 READY 任务，等待用户指令"
+]
+
+# 强制约束
+[constraints]
+must_read_blackboard = true
+must_load_all_assets = true
+must_orchestrator_perspective = true
+silent_skip_forbidden = true

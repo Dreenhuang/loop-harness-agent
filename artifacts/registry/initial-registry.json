@@ -1,0 +1,18 @@
+{
+  "description": "初始工件注册表 - 所有工件状态为 PENDING",
+  "created_at": "2026-06-16",
+  "artifacts": {
+    "Product-Spec.md": { "artifact_path": "docs/Product-Spec.md", "owner_role": "@Requirements", "phase": "Phase 1", "status": "PENDING", "version": "0.0.0" },
+    "Design-Brief.md": { "artifact_path": "docs/Design-Brief.md", "owner_role": "@UX-Researcher", "phase": "Phase 2-3", "status": "PENDING", "version": "0.0.0" },
+    "UI-Design.md": { "artifact_path": "docs/UI-Design.md", "owner_role": "@UI-Designer", "phase": "Phase 3", "status": "PENDING", "version": "0.0.0" },
+    "Component-Library.md": { "artifact_path": "docs/Component-Library.md", "owner_role": "@UI-Designer", "phase": "Phase 3", "status": "PENDING", "version": "0.0.0" },
+    "Architecture.md": { "artifact_path": "docs/architecture.md", "owner_role": "@Architect", "phase": "Phase 4", "status": "PENDING", "version": "0.0.0" },
+    "API-Spec.md": { "artifact_path": "docs/api/", "owner_role": "@Architect", "phase": "Phase 4", "status": "PENDING", "version": "0.0.0" },
+    "DEV-PLAN.md": { "artifact_path": "docs/DEV-PLAN.md", "owner_role": "@Backend", "phase": "Phase 5", "status": "PENDING", "version": "0.0.0" },
+    "Quality-Check-Report.md": { "artifact_path": "docs/reviews/Quality-Check-Report.md", "owner_role": "@Code-Reviewer", "phase": "Phase 6", "status": "PENDING", "version": "0.0.0" },
+    "Test-Report.md": { "artifact_path": "docs/tests/Test-Report.md", "owner_role": "@全栈测试员", "phase": "Phase 6", "status": "PENDING", "version": "0.0.0" },
+    "Code-Review-Report.md": { "artifact_path": "docs/reviews/Code-Review-Report.md", "owner_role": "@Code-Reviewer", "phase": "Phase 6", "status": "PENDING", "version": "0.0.0" },
+    "UX-Review-Report.md": { "artifact_path": "docs/reviews/UX-Review-Report.md", "owner_role": "@UX-Researcher", "phase": "Phase 6", "status": "PENDING", "version": "0.0.0" },
+    "Release-Notes.md": { "artifact_path": "docs/Release-Notes.md", "owner_role": "@DevOps", "phase": "Phase 10", "status": "PENDING", "version": "0.0.0" }
+  }
+}

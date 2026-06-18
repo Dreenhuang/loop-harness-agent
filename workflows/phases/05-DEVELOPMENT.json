@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Phase DEVELOPMENT - 并行开发",
+  "version": "1.0.0",
+  "description": "前后端并行开发（fan-out），内置 gate1-code-review 循环",
+
+  "phase": "DEVELOPMENT",
+  "order": 5,
+  "loop_agent_version": "v1.0",
+
+  "entry_conditions": ["ARCHITECTURE.completed"],
+
+  "parallel": true,
+  "max_concurrent_tasks": 7,
+
+  "tasks": [
+    {
+      "id": "T5-BE-1",
+      "agent": "backend",
+      "action": "backend_development",
+      "input": [
+        "blackboard/architecture/tech-stack.md",
+        "blackboard/architecture/modules.md",
+        "blackboard/architecture/openapi.yaml",
+        "blackboard/architecture/db-schema.sql"
+      ],
+      "output": "blackboard/code/backend/src/",
+      "worktree": "wt-backend",
+      "dependencies": [],
+      "internal_loop": "code → test → gate1-code-review → fix → repeat",
+      "max_turns": 8
+    },
+    {
+      "id": "T5-FE-1",
+      "agent": "frontend",
+      "action": "frontend_development",
+      "input": [
+        "blackboard/architecture/tech-stack.md",
+        "blackboard/architecture/modules.md",
+        "blackboard/architecture/openapi.yaml",
+        "blackboard/ui/design.fig",
+        "blackboard/ui/components.md",
+        "blackboard/ui/tokens.json"
+      ],
+      "output": "blackboard/code/frontend/src/",
+      "worktree": "wt-frontend",
+      "dependencies": [],
+      "internal_loop": "code → test → gate1-code-review → fix → repeat",
+      "max_turns": 8
+    }
+  ],
+
+  "exit_gate": "all_code_compiled AND all_unit_tests_pass AND gate1_code_review_passed",
+
+  "budget": { "cost_usd": 40, "iterations": 80 },
+
+  "prev_phase": "ARCHITECTURE",
+  "next_phase": "QUALITY_GATES",
+
+  "internal_gate": "gate1_code_review"
+}

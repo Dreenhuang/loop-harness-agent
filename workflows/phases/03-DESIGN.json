@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Phase DESIGN - 交互 + 视觉设计",
+  "version": "1.0.0",
+  "description": "UX 流程 + 视觉设计 + 组件规范",
+
+  "phase": "DESIGN",
+  "order": 3,
+  "loop_agent_version": "v1.0",
+
+  "entry_conditions": ["REQUIREMENTS.completed"],
+
+  "tasks": [
+    {
+      "id": "T2-1",
+      "agent": "ux_researcher",
+      "action": "ux_flow_design",
+      "input": ["blackboard/requirements/baseline-v1.0.json"],
+      "output": "blackboard/ux/flow-diagram.md",
+      "dependencies": []
+    },
+    {
+      "id": "T2-2",
+      "agent": "ux_researcher",
+      "action": "user_journey_map",
+      "input": ["blackboard/requirements/baseline-v1.0.json"],
+      "output": "blackboard/ux/journey-map.md",
+      "dependencies": []
+    },
+    {
+      "id": "T2-3",
+      "agent": "ux_researcher",
+      "action": "wireframe_prototype",
+      "input": ["blackboard/ux/flow-diagram.md", "blackboard/requirements/baseline-v1.0.json"],
+      "output": "blackboard/ux/wireframe.fig",
+      "dependencies": ["T2-1"]
+    },
+    {
+      "id": "T2-4",
+      "agent": "ui_designer",
+      "action": "design_system_apply",
+      "input": [".trae/skills/core/taste-skill/"],
+      "output": "blackboard/ui/design-system.md",
+      "dependencies": []
+    },
+    {
+      "id": "T2-5",
+      "agent": "ui_designer",
+      "action": "high_fidelity_design",
+      "input": ["blackboard/ux/wireframe.fig", "blackboard/ui/design-system.md"],
+      "output": "blackboard/ui/design.fig",
+      "dependencies": ["T2-3", "T2-4"]
+    },
+    {
+      "id": "T2-6",
+      "agent": "ui_designer",
+      "action": "component_spec",
+      "input": ["blackboard/ui/design.fig", "blackboard/requirements/baseline-v1.0.json"],
+      "output": "blackboard/ui/components.md",
+      "dependencies": ["T2-5"]
+    },
+    {
+      "id": "T2-7",
+      "agent": "ui_designer",
+      "action": "design_tokens",
+      "input": ["blackboard/ui/design-system.md"],
+      "output": "blackboard/ui/tokens.json",
+      "dependencies": ["T2-4"]
+    }
+  ],
+
+  "exit_gate": "taste_skill_validated AND ux_scenario_coverage_100",
+
+  "budget": { "cost_usd": 10, "iterations": 20 },
+
+  "prev_phase": "REQUIREMENTS",
+  "next_phase": "ARCHITECTURE"
+}

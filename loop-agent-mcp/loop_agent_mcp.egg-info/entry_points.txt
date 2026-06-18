@@ -1,0 +1,2 @@
+[console_scripts]
+loop-agent-mcp = loop_agent_mcp.server:main

@@ -1,0 +1,93 @@
+{
+  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/specification/main/schema/mcp-config.schema.json",
+  "name": "loop-agent-shell",
+  "version": "1.0.0",
+  "description": "Loop Agent Shell 命令执行 MCP（受限沙箱）",
+  "loop_agent_version": "v1.0",
+
+  "type": "mcp-server",
+  "transport": "stdio",
+
+  "command": "npx",
+  "args": [
+    "-y",
+    "@modelcontextprotocol/server-shell",
+    "--sandbox",
+    "--working-dir",
+    "."
+  ],
+
+  "capabilities": {
+    "tools": [
+      "shell_exec",
+      "shell_bg"
+    ]
+  },
+
+  "sandbox": {
+    "enabled": true,
+    "timeout_seconds": 300,
+    "max_memory_mb": 2048,
+    "network": "limited",
+    "allowed_commands": [
+      "bun",
+      "npm",
+      "node",
+      "git",
+      "docker",
+      "make",
+      "curl",
+      "wget",
+      "ps",
+      "kill",
+      "ls",
+      "cat",
+      "mkdir",
+      "cp",
+      "mv",
+      "rm"
+    ],
+    "forbidden_commands": [
+      "rm -rf /",
+      "rm -rf *",
+      "format",
+      "dd",
+      "shutdown",
+      "reboot",
+      ":(){:|:&};:"
+    ],
+    "forbidden_paths": [
+      "/etc",
+      "/var",
+      "/usr",
+      "C:\\Windows",
+      "C:\\System32"
+    ]
+  },
+
+  "agent_visibility": {
+    "orchestrator": "read",
+    "product_manager": "none",
+    "requirements": "none",
+    "ux_researcher": "none",
+    "ui_designer": "none",
+    "architect": "none",
+    "backend": "read_write",
+    "frontend": "read_write",
+    "bug_defect_repairer": "read_write",
+    "code_reviewer": "none",
+    "professional_performance": "read_write",
+    "tester": "read_write",
+    "knowledge_curator": "none",
+    "documenter": "none",
+    "final_reviewer": "none",
+    "devops": "read_write"
+  },
+
+  "metadata": {
+    "loop_agent_layer": 1,
+    "category": "infrastructure",
+    "required": false,
+    "fallback": "Native Trae shell tool"
+  }
+}

@@ -1,0 +1,126 @@
+# =============================================================================
+# Loop Agent · Agent 角色配置
+# =============================================================================
+# 版本：v1.0
+# 生效日期：2026-06-15
+# 详细 Profile 见 .trae/agents/*.agent.toml
+# =============================================================================
+
+version: "1.0"
+loop_agent_version: "v1.0"
+
+# 16 角色清单（与 .trae/agents/ 一一对应）
+agents:
+  - id: orchestrator
+    display_name: "@Orchestrator"
+    layer: 1
+    type: supervisor
+    profile: .trae/agents/orchestrator.agent.toml
+
+  - id: product_manager
+    display_name: "@Product-Manager"
+    layer: 2
+    type: decision_maker
+    profile: .trae/agents/product-manager.agent.toml
+
+  - id: requirements
+    display_name: "@Requirements"
+    layer: 2
+    type: specialist
+    profile: .trae/agents/requirements.agent.toml
+
+  - id: ux_researcher
+    display_name: "@UX-Researcher"
+    layer: 2
+    type: specialist
+    profile: .trae/agents/ux-researcher.agent.toml
+
+  - id: ui_designer
+    display_name: "@UI-Designer"
+    layer: 2
+    type: specialist
+    profile: .trae/agents/ui-designer.agent.toml
+
+  - id: architect
+    display_name: "@Architect"
+    layer: 3
+    type: decision_maker
+    profile: .trae/agents/architect.agent.toml
+
+  - id: backend
+    display_name: "@Backend"
+    layer: 4
+    type: specialist
+    profile: .trae/agents/backend.agent.toml
+
+  - id: frontend
+    display_name: "@Fullstack-Coder"
+    layer: 4
+    type: specialist
+    profile: .trae/agents/fullstack-coder.agent.toml
+
+  - id: bug_defect_repairer
+    display_name: "@Bug-Defect-Repairer"
+    layer: 4
+    type: specialist
+    profile: .trae/agents/bug-defect-repairer.agent.toml
+
+  - id: code_reviewer
+    display_name: "@Code-Reviewer"
+    layer: 5
+    type: gate_keeper
+    profile: .trae/agents/code-reviewer.agent.toml
+
+  - id: professional_performance
+    display_name: "@Professional-Performance"
+    layer: 5
+    type: gate_keeper
+    profile: .trae/agents/professional-performance.agent.toml
+
+  - id: tester
+    display_name: "@全栈测试员"
+    layer: 5
+    type: gate_keeper
+    profile: .trae/agents/tester.agent.toml
+
+  - id: knowledge_curator
+    display_name: "@Knowledge-Curator"
+    layer: 6
+    type: specialist
+    profile: .trae/agents/knowledge-curator.agent.toml
+
+  - id: documenter
+    display_name: "@Documenter"
+    layer: 7
+    type: specialist
+    profile: .trae/agents/documenter.agent.toml
+
+  - id: final_reviewer
+    display_name: "@Final-Reviewer"
+    layer: 7
+    type: gate_keeper
+    profile: .trae/agents/final-reviewer.agent.toml
+
+  - id: devops
+    display_name: "@DevOps"
+    layer: 7
+    type: specialist
+    profile: .trae/agents/devops.agent.toml
+
+# 角色层定义
+layers:
+  1: { name: "调度层", description: "Orchestrator 唯一" }
+  2: { name: "决策层 + 业务层", description: "PM / Requirements / UX / UI" }
+  3: { name: "技术架构层", description: "Architect 唯一" }
+  4: { name: "研发层", description: "Backend / Frontend / Bug-Defect-Repairer" }
+  5: { name: "质量门禁层", description: "Code-Reviewer / Performance / Tester" }
+  6: { name: "知识沉淀层", description: "Knowledge-Curator 唯一" }
+  7: { name: "交付层", description: "Documenter / Final-Reviewer / DevOps" }
+
+# 全局约束
+constraints:
+  max_agents_per_fanout: 7          # 3-7 Agent 规则
+  max_concurrent_tasks: 16
+  maker_checker_separation: true
+  ralph_mode: true
+  loud_failure_only: true

@@ -1,0 +1,61 @@
+# =============================================================================
+# Loop Agent · 预算配置
+# =============================================================================
+# 版本：v1.0
+# 生效日期：2026-06-15
+# 对齐：Trae Solo 工程实现指南 第十章
+# =============================================================================
+
+version: "1.0"
+loop_agent_version: "v1.0"
+
+# 全局预算
+global:
+  max_cost_usd: 100.0          # 硬上限（第 2 道硬刹车）
+  max_iterations: 200         # 硬上限（第 1 道硬刹车）
+  warn_threshold: 0.8         # 80% 警告
+  stop_threshold: 0.95        # 95% 硬停止
+
+# 单 Phase 预算分配
+phase_budgets:
+  INIT:               { cost: 1, iterations: 2 }
+  REQUIREMENTS:       { cost: 5, iterations: 10 }
+  DESIGN:             { cost: 10, iterations: 20 }
+  ARCHITECTURE:       { cost: 10, iterations: 15 }
+  DEVELOPMENT:        { cost: 40, iterations: 80 }
+  QUALITY_GATES:      { cost: 25, iterations: 50 }
+  KNOWLEDGE:          { cost: 5, iterations: 10 }
+  DOCUMENTATION:      { cost: 5, iterations: 10 }
+  FINAL_REVIEW:       { cost: 3, iterations: 5 }
+  DEPLOY:             { cost: 2, iterations: 5 }
+
+# 单任务预算
+task_budget:
+  max_attempts: 3
+  max_cost_per_task_usd: 5.0
+  timeout_seconds: 300
+
+# 角色 Token 限制
+agent_token_limits:
+  orchestrator:           { input: 4000, output: 2000 }
+  product_manager:        { input: 6000, output: 3000 }
+  requirements:           { input: 6000, output: 3000 }
+  ux_researcher:          { input: 6000, output: 3000 }
+  ui_designer:            { input: 6000, output: 3000 }
+  architect:              { input: 8000, output: 4000 }
+  backend:                { input: 8000, output: 4000 }
+  frontend:               { input: 8000, output: 4000 }
+  bug_defect_repairer:    { input: 8000, output: 4000 }
+  code_reviewer:          { input: 6000, output: 3000 }
+  professional_performance: { input: 6000, output: 3000 }
+  tester:                 { input: 6000, output: 3000 }
+  knowledge_curator:      { input: 6000, output: 3000 }
+  documenter:             { input: 6000, output: 3000 }
+  final_reviewer:         { input: 6000, output: 3000 }
+  devops:                 { input: 6000, output: 3000 }
+
+# 预算告警
+alerts:
+  on_80_percent: "warning"
+  on_95_percent: "stop"
+  on_exceeded: "emergency_stop"

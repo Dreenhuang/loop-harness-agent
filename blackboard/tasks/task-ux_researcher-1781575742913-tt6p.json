@@ -1,0 +1,10 @@
+{
+  "task_id": "task-ux_researcher-1781575742913-tt6p",
+  "agent_type": "ux_researcher",
+  "phase": "INIT",
+  "status": "RUNNING",
+  "input": {
+    "phase_input": "standard"
+  },
+  "created_at": "2026-06-16T02:09:02.914Z"
+}

@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Gate 1 - 代码质量门禁",
+  "version": "1.0.0",
+  "description": "由 @Code-Reviewer 独立审查，Maker-Checker 分离",
+
+  "gate_id": "GATE_1",
+  "gate_name": "代码质量门禁",
+  "loop_agent_version": "v1.0",
+
+  "agent": "code_reviewer",
+  "skill": "gate1-code-review",
+  "permission": "read_only",
+
+  "trigger": "DEVELOPMENT.completed",
+  "embedded_in_phase": "DEVELOPMENT",
+
+  "input_paths": [
+    "blackboard/code/backend/src/",
+    "blackboard/code/frontend/src/"
+  ],
+  "output_path": "blackboard/reviews/review-<taskId>.json",
+
+  "thresholds": {
+    "blocker": {
+      "build_errors": 0,
+      "security_critical": 0,
+      "sql_injection_risks": 0,
+      "xss_risks": 0,
+      "hardcoded_secrets": 0,
+      "typescript_errors": 0,
+      "test_failures": 0
+    },
+    "major": {
+      "test_coverage_min": 80,
+      "code_duplication_max": 3,
+      "cyclomatic_complexity_max": 10,
+      "function_lines_max": 50,
+      "file_lines_max": 300
+    }
+  },
+
+  "pass_criteria": "blocker_count == 0 AND major_count == 0",
+
+  "fail_action": "→ bug_defect_repairer → 回到 DEVELOPMENT",
+
+  "max_attempts": 3,
+  "timeout_seconds": 600
+}

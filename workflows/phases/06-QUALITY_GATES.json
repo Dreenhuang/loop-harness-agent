@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Phase QUALITY_GATES - 质量门禁",
+  "version": "1.0.0",
+  "description": "3 道门禁（Gate 1 已嵌在 DEVELOPMENT，此处仅 Gate 2 + Gate 3）",
+
+  "phase": "QUALITY_GATES",
+  "order": 6,
+  "loop_agent_version": "v1.0",
+
+  "entry_conditions": ["DEVELOPMENT.completed"],
+
+  "sub_phases": [
+    {
+      "id": "GATE_2",
+      "name": "性能门禁",
+      "agent": "professional_performance",
+      "skill": "gate2-performance",
+      "input": ["blackboard/code/backend/src/", "blackboard/code/frontend/src/"],
+      "output": "blackboard/performance/perf-report.json",
+      "failure_path": "→ bug_defect_repairer → 回到 DEVELOPMENT"
+    },
+    {
+      "id": "GATE_3",
+      "name": "全栈测试门禁",
+      "agent": "tester",
+      "skill": "gate3-testing",
+      "input": ["blackboard/code/backend/src/", "blackboard/code/frontend/src/", "blackboard/architecture/openapi.yaml"],
+      "output": "blackboard/test_reports/test-report.json",
+      "failure_path": "→ bug_defect_repairer → 回到 DEVELOPMENT"
+    }
+  ],
+
+  "exit_gate": "gate2_passed AND gate3_passed",
+
+  "budget": { "cost_usd": 25, "iterations": 50 },
+
+  "prev_phase": "DEVELOPMENT",
+  "next_phase": "KNOWLEDGE",
+
+  "internal_gates": ["gate2_performance", "gate3_testing"]
+}

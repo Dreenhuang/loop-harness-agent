@@ -1,0 +1,446 @@
+# =============================================================================
+# Loop Agent · trae.toml 主配置文件
+# 完全对齐 Trae Solo 工程实现指南 v1.0
+# 生效日期：2026-06-15
+# 文档参考：Trae Solo 工程实现指南：PRD→生产全链路自动化系统.md
+# =============================================================================
+
+version = "1.0"
+name = "loop-agent-system"
+description = "Loop Agent: 4 级封装 + 16 角色 + 10 相位 PRD→生产全链路自动化系统"
+loop_agent_version = "v1.0"
+trae_solo_compliance = "v1.0"
+
+# =============================================================================
+# 系统配置
+# =============================================================================
+[system]
+mode = "orchestration"                # orchestration / chat / agent
+blackboard_enabled = true             # 启用黑板模式
+persist_state = true                  # 状态持久化（断点续跑）
+max_iterations = 200                  # 全局最大迭代（第 1 道硬刹车）
+max_budget_usd = 100.0                # 全局预算上限（第 2 道硬刹车）
+parallel_agents = 16                  # 最大并行 Agent 数（第 3 章：扇出上限）
+default_phase = "INIT"                # 启动阶段
+
+# =============================================================================
+# Blackboard 黑板配置（基底介导通信）
+# =============================================================================
+[blackboard]
+path = "./blackboard"
+state_file = "./blackboard/state.json"
+auto_snapshot = true
+snapshot_interval = "5m"
+enable_versioning = true              # 快照支持版本回溯
+input_dir = "./blackboard/input"      # PRD 入口点
+output_dir = "./blackboard/output"    # 最终交付物目录
+snapshots_dir = "./blackboard/.snapshots"
+log_dir = "./blackboard/logs"
+schema_validation = true              # 写入时强制 JSON Schema 验证（防污染）
+
+# 知识图谱（12 节点类型）
+[blackboard.knowledge_graph]
+enabled = true
+node_types = ["PRD", "UX", "UI", "Architecture", "API", "Code", "DB", "Config", "Test", "Gate", "Knowledge", "DOC"]
+node_states = ["NOT_STARTED", "PENDING", "RUNNING", "DONE", "FAILED", "BLOCKED"]
+
+# A2A 消息日志
+[blackboard.a2a]
+enabled = true
+message_log = "./blackboard/a2a/messages.jsonl"
+topic_index = "./blackboard/a2a/topic_index.json"
+dead_letter = "./blackboard/a2a/dead_letter.jsonl"
+
+# =============================================================================
+# Router 路由配置（Orchestrator 调度）
+# =============================================================================
+[router]
+type = "custom"                       # 使用自定义路由（Orchestrator）
+default_agent = "orchestrator"
+enable_fallback = true
+max_concurrent_tasks = 16
+task_timeout = "300s"
+max_retries = 3
+
+# =============================================================================
+# Agent 角色配置（16 角色 · 4 层架构）
+# =============================================================================
+[agents]
+
+  # ---- 调度层 ----
+  [agents.orchestrator]
+  enabled = true
+  type = "supervisor"
+  isolation = "process"
+  role = "全局调度、任务分派、状态管理、故障应急"
+  skills = ["budget-track", "progress-detect", "state-snapshot", "orchestrate-map-reduce"]
+  worktree = false
+  stateles = true
+
+  # ---- 决策层 ----
+  [agents.product_manager]
+  enabled = true
+  type = "specialist"
+  isolation = "process"
+  role = "产品规划、业务决策、需求优先级"
+  worktree = false
+  stateles = true
+
+  # ---- 业务层 ----
+  [agents.requirements]
+  enabled = true
+  type = "specialist"
+  isolation = "process"
+  worktree = false
+  stateles = true
+
+  [agents.ux_researcher]
+  enabled = true
+  type = "specialist"
+  isolation = "process"
+  worktree = false
+  stateles = true
+
+  [agents.ui_designer]
+  enabled = true
+  type = "specialist"
+  isolation = "process"
+  worktree = false
+  stateles = true
+
+  # ---- 技术层 ----
+  [agents.architect]
+  enabled = true
+  type = "specialist"
+  isolation = "process"
+  worktree = false
+  stateles = true
+
+  [agents.backend]
+  enabled = true
+  type = "specialist"
+  isolation = "process"
+  worktree = true                     # 独立 worktree
+  stateles = true
+  max_input_tokens = 8000
+  max_output_tokens = 4000
+
+  [agents.frontend]
+  enabled = true
+  type = "specialist"
+  isolation = "process"
+  worktree = true
+  stateles = true
+  max_input_tokens = 8000
+  max_output_tokens = 4000
+
+  [agents.bug_defect_repairer]
+  enabled = true
+  type = "specialist"
+  isolation = "process"
+  worktree = true
+  stateles = true
+
+  # ---- 质量层 ----
+  [agents.code_reviewer]
+  enabled = true
+  type = "gate_keeper"
+  isolation = "process"
+  worktree = false
+  stateles = true
+  permission = "read_only"            # 只读权限（Maker-Checker 分离）
+
+  [agents.professional_performance]
+  enabled = true
+  type = "gate_keeper"
+  isolation = "process"
+  worktree = false
+  stateles = true
+
+  [agents.tester]
+  enabled = true
+  type = "gate_keeper"
+  isolation = "process"
+  worktree = false
+  stateles = true
+  permission = "read_only"
+
+  # ---- 知识层 ----
+  [agents.knowledge_curator]
+  enabled = true
+  type = "specialist"
+  isolation = "process"
+  worktree = false
+  stateles = true
+
+  # ---- 交付层 ----
+  [agents.documenter]
+  enabled = true
+  type = "specialist"
+  isolation = "process"
+  worktree = false
+  stateles = true
+
+  [agents.final_reviewer]
+  enabled = true
+  type = "gate_keeper"
+  isolation = "process"
+  worktree = false
+  stateles = true
+  permission = "read_only"
+
+  [agents.devops]
+  enabled = true
+  type = "specialist"
+  isolation = "process"
+  worktree = false
+  stateles = true
+  permission = "read_write"           # 唯一全权限角色
+
+# =============================================================================
+# 优化配置（Ralph 模式 + 窄上下文）
+# =============================================================================
+[optimization]
+ralph_mode = true                     # Ralph 模式：每轮重置上下文
+reset_context_each_turn = true        # 每轮重置（关键！）
+max_context_turns = 1                 # 只保留当前轮对话
+narrow_context = true                 # 窄上下文：只传必要信息
+enable_caching = true                 # 结果缓存（指纹哈希）
+cache_ttl = "24h"
+minimal_input = true                  # 最小输入：只传路径不传内容
+skill_reuse = true                    # Skill 资产化复用
+heartbeat_jitter_minutes = 30         # 监控类心跳 + 抖动
+max_agents_per_fanout = 7             # 3-7 Agent 规则
+target_token_savings = "60-70%"       # 综合 Token 节省目标
+
+# =============================================================================
+# MCP 工具链（4 个 MCP server + 权限矩阵）
+# =============================================================================
+[mcp]
+enabled = true
+config_dir = "./mcp"
+
+# Filesystem MCP（所有 Agent 都可用）
+[[mcp.servers]]
+name = "filesystem"
+command = "npx"
+args = ["@modelcontextprotocol/server-filesystem", "./blackboard"]
+description = "Blackboard 文件系统访问"
+
+# Git MCP（开发/部署 Agent）
+[[mcp.servers]]
+name = "git"
+command = "npx"
+args = ["@modelcontextprotocol/server-git", "./blackboard/code"]
+description = "Git 操作（commit/diff/log）"
+
+# Shell MCP（受限 Agent）
+[[mcp.servers]]
+name = "shell"
+command = "npx"
+args = ["@modelcontextprotocol/server-shell"]
+description = "Shell 命令执行（受限）"
+
+# Testing MCP（测试/性能 Agent）
+[[mcp.servers]]
+name = "testing"
+command = "npx"
+args = ["@modelcontextprotocol/server-testing"]
+description = "测试与性能测试工具"
+
+# 工具权限矩阵
+[mcp.permissions]
+  # Agent           filesystem       git          shell        testing
+  orchestrator     = "read_write"    "read"        "read"       "read"
+  product_manager  = "read_write"    "none"        "none"       "none"
+  requirements     = "read_write"    "none"        "none"       "none"
+  ux_researcher    = "read_write"    "none"        "none"       "none"
+  ui_designer      = "read_write"    "none"        "none"       "none"
+  architect        = "read_write"    "read"        "none"       "none"
+  backend          = "read_write"    "read_write"  "read_write" "read_write"
+  frontend         = "read_write"    "read_write"  "read_write" "read_write"
+  bug_defect_repairer = "read_write" "read_write"  "read_write" "read_write"
+  code_reviewer    = "read_only"     "none"        "none"       "none"
+  performance      = "read_only"     "none"        "read_write" "read_write"
+  tester           = "read_only"     "none"        "read_write" "read_write"
+  knowledge_curator = "read_write"   "none"        "none"       "none"
+  documenter       = "read_write"   "none"        "none"       "none"
+  final_reviewer   = "read_only"     "none"        "none"       "none"
+  devops           = "read_write"   "read_write"  "read_write" "read_write"
+
+# =============================================================================
+# 质量门禁（4 道门禁 · Maker-Checker 严格分离）
+# =============================================================================
+[quality_gates]
+  [quality_gates.gate1_code_review]
+  skill = "gate1-code-review"
+  agent = "code_reviewer"
+  trigger = "DEVELOPMENT.completed"
+  pass_criteria = "blocker_count == 0 AND major_count == 0"
+  fail_action = "→ bug_defect_repairer → 回到 DEVELOPMENT"
+
+  [quality_gates.gate2_performance]
+  skill = "gate2-performance"
+  agent = "professional_performance"
+  trigger = "gate1.passed"
+  pass_criteria = "p95_ms <= 300 AND error_rate <= 0.001"
+  fail_action = "→ bug_defect_repairer → 回到 DEVELOPMENT"
+
+  [quality_gates.gate3_testing]
+  skill = "gate3-testing"
+  agent = "tester"
+  trigger = "gate2.passed"
+  pass_criteria = "p0_bugs == 0 AND p1_bugs == 0 AND p2_bugs <= 3"
+  fail_action = "→ bug_defect_repairer → 回到 DEVELOPMENT"
+
+  [quality_gates.gate4_final]
+  skill = "gate4-final"
+  agent = "final_reviewer"
+  trigger = "DOCUMENTATION.completed"
+  pass_criteria = "risk_level IN ['LOW', 'MEDIUM'] AND all_gates_passed"
+  fail_action = "→ 回到对应 Phase 修复"
+
+# =============================================================================
+# Workflow 工作流配置
+# =============================================================================
+[workflow]
+main_blueprint = "./workflows/prd-to-production.json"
+phases_dir = "./workflows/phases"
+gates_dir = "./workflows/gates"
+max_parallel_phases = 3
+
+# 10 相位（语义化大写，与 Trae Solo 对齐）
+[workflow.phases]
+order = [
+  "INIT",
+  "REQUIREMENTS",
+  "DESIGN",
+  "ARCHITECTURE",
+  "DEVELOPMENT",
+  "QUALITY_GATES",
+  "KNOWLEDGE",
+  "DOCUMENTATION",
+  "FINAL_REVIEW",
+  "DEPLOY",
+  "DONE"
+]
+
+# 状态机核心
+[workflow.state_machine]
+implementation = "./loop-agent-engine/orchestrator.ts"
+runtime = "bun"
+mode = "executable_and_reference"  # 既能独立跑，也能被 Trae 引用
+
+# =============================================================================
+# 知识库（Knowledge-Curator 维护）
+# =============================================================================
+[knowledge]
+enabled = true
+auto_extract = true
+auto_match_threshold = 0.85
+storage_dir = "./docs/knowledge"
+index_file = "./blackboard/knowledge_index.json"
+problem_solutions_dir = "./docs/knowledge/problems/"
+architecture_decisions_dir = "./docs/knowledge/architectures/"
+reusable_components_dir = "./docs/knowledge/components/"
+best_practices_dir = "./docs/knowledge/best-practices/"
+pitfalls_dir = "./docs/knowledge/pitfalls/"
+
+# =============================================================================
+# 全局护栏（3 道硬刹车）
+# =============================================================================
+[guardrails]
+max_budget_usd = 100.0
+max_total_iterations = 200
+max_iterations_per_task = 8
+max_attempts_per_task = 3
+no_progress_detection = true
+no_progress_threshold = 3            # 连续 3 轮无进展即停
+loud_failure_only = true             # 禁止静默失败
+maker_checker_separation = true      # 生成者不自验
+circuit_breaker_failure_threshold = 3
+circuit_breaker_reset_timeout = "60s"
+
+# =============================================================================
+# 触发配置（双通道：斜杠命令 + 自然语言）
+# =============================================================================
+[triggers]
+slash_commands = ["/loop-agent"]
+natural_language_patterns = [
+  "用 Loop Agent 模式开发",
+  "启动 Loop Agent",
+  "按 Loop Engineering 流程做",
+  "按 PRD→生产 流水线做",
+  "全自动化开发",
+  "按 16 角色团队开发",
+  "按照 Agent Loop 模式",
+  "Loop 模式启动",
+  "走 Loop Agent 流程",
+  "用循环工程开发",
+  "用 Harness Engineering 模式"
+]
+
+# =============================================================================
+# 异常处理（4 级）
+# =============================================================================
+[exception_handling]
+  [exception_handling.level_1_minor]
+  trigger = "单次任务失败，可重试"
+  action = "自动重试（最多 3 次），重置 worktree"
+  escalation = "连续 3 次失败 → Level 2"
+
+  [exception_handling.level_2_normal]
+  trigger = "连续失败，知识库有方案"
+  action = "应用匹配方案，分派 bug_defect_repairer"
+  escalation = "方案无效 → Level 3"
+
+  [exception_handling.level_3_serious]
+  trigger = "无已知方案，单任务阻塞"
+  action = "生成故障报告，尝试替代方案"
+  escalation = "替代方案无效 → Level 4"
+
+  [exception_handling.level_4_critical]
+  trigger = "流程阻塞，无法继续"
+  action = "暂停所有任务，保存完整状态"
+  escalation = "立即人工介入"
+
+# =============================================================================
+# 4 级封装资产路径
+# =============================================================================
+[encapsulation]
+  [encapsulation.layer_1_skills]
+  path = "./.trae/skills/core"
+  count = 10
+  description = "4 门禁 + 5 原子 + 1 知识"
+
+  [encapsulation.layer_2_agents]
+  path = "./.trae/agents"
+  count = 16
+  description = "16 角色 TOML Profile"
+
+  [encapsulation.layer_3_workflow]
+  path = "./workflows"
+  description = "10 相位 + 4 门禁 + 子文件"
+
+  [encapsulation.layer_4_chip]
+  path = "./domain-chips"
+  description = "领域黑盒 + Autoloop 自进化"
+
+# =============================================================================
+# 备份与恢复
+# =============================================================================
+[backup]
+auto_snapshot = true
+snapshot_retention = 100              # 保留最近 100 个快照
+phase_snapshots = "permanent"         # Phase 快照永久保留
+task_snapshots_retention_days = 30    # Task 快照保留 30 天
+
+# =============================================================================
+# 元信息
+# =============================================================================
+[meta]
+created_at = "2026-06-15"
+created_by = "Loop Agent v1.0"
+trae_solo_doc = "Trae Solo 工程实现指南：PRD→生产全链路自动化系统.md"
+upgrade_from = "loop-agent-v1.0-baseline"
+upgrade_to = "loop-agent-v1.1-trae-solo-aligned"

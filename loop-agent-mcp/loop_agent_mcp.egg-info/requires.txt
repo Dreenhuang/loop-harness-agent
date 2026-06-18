@@ -1,0 +1,10 @@
+mcp>=1.0.0
+
+[all]
+loop-agent-mcp[dev]
+
+[dev]
+pytest>=7.0
+pytest-asyncio>=0.21
+pytest-cov>=4.0
+mypy>=1.0

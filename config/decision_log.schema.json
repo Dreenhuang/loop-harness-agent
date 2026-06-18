@@ -1,0 +1,163 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Loop Agent Decision Log Schema",
+  "description": "无人值守模式下，所有自动决策的标准化记录格式",
+  "version": "1.0.0",
+  "loop_agent_version": "v1.1",
+
+  "type": "object",
+  "required": ["version", "loop_agent_version", "session", "decisions"],
+  "properties": {
+    "version": { "type": "string" },
+    "loop_agent_version": { "type": "string" },
+    "session": { "$ref": "#/definitions/session" },
+    "decisions": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/decision" }
+    },
+    "pending_decisions": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/pending_decision" }
+    },
+    "summary": { "$ref": "#/definitions/summary" }
+  },
+
+  "definitions": {
+    "session": {
+      "type": "object",
+      "required": ["id", "mode", "started_at"],
+      "properties": {
+        "id": { "type": "string" },
+        "mode": { "enum": ["interactive", "unattended", "scheduled"] },
+        "started_at": { "type": "string", "format": "date-time" },
+        "ended_at": { "type": "string", "format": "date-time" },
+        "user_present": { "type": "boolean" },
+        "max_duration_hours": { "type": "number" },
+        "max_budget_usd": { "type": "number" },
+        "user_timezone": { "type": "string" }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "required": ["id", "timestamp", "type", "category", "decision", "rationale", "result"],
+      "properties": {
+        "id": { "type": "string", "description": "DEC-001 顺序编号" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "type": { "enum": ["auto", "user_required", "escalated"] },
+        "category": {
+          "enum": [
+            "file_operation",
+            "resource_allocation",
+            "parameter_tuning",
+            "error_recovery",
+            "bug_fix",
+            "code_generation",
+            "documentation",
+            "architecture",
+            "deployment",
+            "scheduling"
+          ]
+        },
+        "context": {
+          "type": "object",
+          "description": "决策时的完整上下文"
+        },
+        "decision": { "type": "string", "description": "实际选择的方案" },
+        "candidates": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "可选方案列表"
+        },
+        "rationale": { "type": "string", "description": "选择理由" },
+        "result": { "enum": ["SUCCESS", "FAILED", "PARTIAL", "SKIPPED"] },
+        "impact": { "enum": ["low", "medium", "high", "critical"] },
+        "reversible": { "type": "boolean" },
+        "rollback_path": { "type": "string", "description": "回滚方式" },
+        "metrics": {
+          "type": "object",
+          "description": "决策带来的可量化指标变化"
+        }
+      }
+    },
+    "pending_decision": {
+      "type": "object",
+      "required": ["id", "timestamp", "type", "severity", "category", "context", "options", "default_in_unattended"],
+      "properties": {
+        "id": { "type": "string", "description": "DEC-PENDING-001 编号" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "type": { "enum": ["user_required", "user_acknowledged", "auto_resolved"] },
+        "severity": { "enum": ["low", "medium", "high", "critical"] },
+        "category": { "type": "string" },
+        "context": {
+          "type": "object",
+          "properties": {
+            "what_happened": { "type": "string" },
+            "why": { "type": "string" },
+            "expected_remaining_hours": { "type": "number" }
+          }
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "risk": { "type": "string" },
+              "reversible": { "type": "boolean" }
+            }
+          }
+        },
+        "default_in_unattended": { "type": "string" },
+        "applied_action": { "type": "string" },
+        "user_acknowledged": { "type": "boolean" },
+        "acknowledged_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "total_decisions": { "type": "integer" },
+        "auto": { "type": "integer" },
+        "user_required": { "type": "integer" },
+        "escalated": { "type": "integer" },
+        "success_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "reversible_count": { "type": "integer" },
+        "irreversible_count": { "type": "integer" }
+      }
+    }
+  },
+
+  "examples": [
+    {
+      "version": "1.0",
+      "loop_agent_version": "v1.1",
+      "session": {
+        "id": "session-2026-06-15-2300",
+        "mode": "unattended",
+        "started_at": "2026-06-15T23:00:00Z",
+        "user_present": false,
+        "max_duration_hours": 9
+      },
+      "decisions": [
+        {
+          "id": "DEC-001",
+          "timestamp": "2026-06-15T23:15:32Z",
+          "type": "auto",
+          "category": "file_operation",
+          "context": {
+            "task_id": "T5-BE-1",
+            "agent": "@Backend",
+            "operation": "create_temp_file"
+          },
+          "decision": "CREATE .cache/api-schema.json",
+          "rationale": "临时缓存文件，可重建，加快解析速度 30%",
+          "result": "SUCCESS",
+          "impact": "low",
+          "reversible": true,
+          "rollback_path": "rm .cache/api-schema.json"
+        }
+      ]
+    }
+  ]
+}

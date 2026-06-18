@@ -1,0 +1,94 @@
+{
+  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/specification/main/schema/mcp-config.schema.json",
+  "name": "loop-agent-git",
+  "version": "1.0.0",
+  "description": "Loop Agent Git 操作 MCP（commit/diff/log/worktree）",
+  "loop_agent_version": "v1.0",
+
+  "type": "mcp-server",
+  "transport": "stdio",
+
+  "command": "npx",
+  "args": [
+    "-y",
+    "@modelcontextprotocol/server-git",
+    "--repository",
+    ".",
+    "--branch",
+    "main"
+  ],
+
+  "capabilities": {
+    "tools": [
+      "git_status",
+      "git_diff",
+      "git_log",
+      "git_commit",
+      "git_branch",
+      "git_worktree_add",
+      "git_worktree_remove",
+      "git_worktree_list",
+      "git_checkout",
+      "git_merge",
+      "git_stash"
+    ]
+  },
+
+  "permissions": {
+    "read_operations": [
+      "git_status",
+      "git_diff",
+      "git_log",
+      "git_branch",
+      "git_worktree_list"
+    ],
+    "write_operations": [
+      "git_commit",
+      "git_worktree_add",
+      "git_worktree_remove",
+      "git_checkout",
+      "git_merge",
+      "git_stash"
+    ],
+    "forbidden_operations": [
+      "git_push --force",
+      "git_reset --hard",
+      "git_clean -fd",
+      "git_branch -D main/master"
+    ]
+  },
+
+  "agent_visibility": {
+    "orchestrator": "read",
+    "product_manager": "none",
+    "requirements": "none",
+    "ux_researcher": "none",
+    "ui_designer": "none",
+    "architect": "read",
+    "backend": "read_write",
+    "frontend": "read_write",
+    "bug_defect_repairer": "read_write",
+    "code_reviewer": "none",
+    "professional_performance": "none",
+    "tester": "none",
+    "knowledge_curator": "none",
+    "documenter": "none",
+    "final_reviewer": "none",
+    "devops": "read_write"
+  },
+
+  "worktree_strategy": {
+    "isolation_mode": "per_agent",
+    "auto_create_on_spawn": true,
+    "auto_cleanup_on_done": true,
+    "max_concurrent_worktrees": 16,
+    "naming_pattern": "wt-{agent_type}-{task_id}"
+  },
+
+  "metadata": {
+    "loop_agent_layer": 1,
+    "category": "infrastructure",
+    "required": false,
+    "fallback": "Native Trae shell + git CLI"
+  }
+}

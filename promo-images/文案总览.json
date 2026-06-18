@@ -1,0 +1,86 @@
+[
+  {
+    "index": 1,
+    "filename": "01-cover.png",
+    "path": null,
+    "success": false,
+    "copy": {
+      "title": "🚀 AI 时代的产品开发流水线",
+      "hook": "宝子们!我发现了一个让产品经理躺着交付项目的 AI 神器",
+      "body": "姐妹们兄弟们!今天必须安利这个 Loop Agent 项目——\n\n🤖 它把一家公司的全部岗位(16 个!)装进了 AI:\n产品经理、需求分析师、UX/UI 设计师、架构师、\n前后端工程师、Bug 修复员、3 道安检员、文档员、终审员……\n\n🔧 还自带 10 阶段流水线 + 4 道质量门禁 + 1 块黑板:\n需求→设计→架构→开发→测试→部署,一步不漏。\n\n💡 最绝的是:MCP Server 让 Claude/GPT/Gemini 全都能用,\n换 AI 也不丢流程!\n\n🌙 还能开无人值守模式,睡前说一声,明早直接拿成果!\n\n📌 适合:Vibe Coding 玩家、想提效的独立开发者、小团队 PM",
+      "hashtags": "#AI编程 #VibeCoding #产品经理 #自动化开发 #AIAgent #开源项目 #程序员日常"
+    }
+  },
+  {
+    "index": 2,
+    "filename": "02-agents.png",
+    "path": null,
+    "success": false,
+    "copy": {
+      "title": "👥 16 个 AI 角色,组成了你的虚拟创业公司",
+      "hook": "1 个 PM + 1 套 AI 团队 = 0 个员工也能交付产品",
+      "body": "你以为 AI 只能写代码?Naive!\n\nLoop Agent 给你配齐了 16 个岗位的 AI 员工:\n\n📋 决策层:@Product-Manager(你)\n🎨 业务层:@Requirements / @UX / @UI / @Architect\n💻 技术层:@Backend / @Frontend / @Bug-Fixer / @DevOps\n🔍 质量层:@Code-Reviewer / @Performance / @Tester\n📚 交付层:@Documenter / @Final-Reviewer\n🧠 知识层:@Knowledge-Curator\n\n✨ 关键设计:Maker-Checker 分离!\n干活的人和检查的人不能是同一个 AI ——\n保证质量门禁不会自欺欺人!\n\n🎯 启示:真实团队也是这个道理,别让全栈扛所有活。",
+      "hashtags": "#AI团队 #Agent #产品经理 #团队管理 #VibeCoding #程序员 #效率工具"
+    }
+  },
+  {
+    "index": 3,
+    "filename": "03-pipeline.png",
+    "path": null,
+    "success": false,
+    "copy": {
+      "title": "⚙️ 10 个阶段,像工厂流水线一样稳定",
+      "hook": "为什么 AI 写代码总翻车?因为你没给它剧本",
+      "body": "宝子们有没有这种体验:\n让 AI 写代码,要么写一半跑偏,要么写完不能用?\n\n🤔 问题不是 AI 笨,是没流程!\n\nLoop Agent 给 AI 安排了 10 阶段剧本:\n\n1️⃣ 初始化(建黑板+加载资产)\n2️⃣ 需求基线(PRD)\n3️⃣ 交互设计(用户旅程)\n4️⃣ 视觉设计(设计稿+组件库)\n5️⃣ 技术架构(选型+API)\n6️⃣ 并行开发(后端+前端)\n7️⃣ 质量门禁(3 道安检)\n8️⃣ 知识沉淀(踩坑记录)\n9️⃣ 文档归档(API+用户手册)\n🔟 部署上线\n\n🎯 启示:产品 Roadmap 也能这么拆!\n从抽象到具体,每个阶段都有明确产物。",
+      "hashtags": "#产品开发流程 #Roadmap #产品经理 #AI自动化 #软件开发 #VibeCoding"
+    }
+  },
+  {
+    "index": 4,
+    "filename": "04-gates.png",
+    "path": null,
+    "success": false,
+    "copy": {
+      "title": "🛡️ 4 道门禁:问题产品休想上线!",
+      "hook": "AI 写的代码不测试就上线?等着 P0 事故吧",
+      "body": "质量不是测出来的,是流程里长出来的!\n\nLoop Agent 的 4 道门禁,每道只盯一个维度:\n\n🚧 Gate 1 · 代码审查\n   负责人:@Code-Reviewer\n   标准:0 Blocker + 0 Major\n   不通过 → 回到 Phase 5 重写\n\n⚡ Gate 2 · 性能压测\n   负责人:@Performance-Engineer\n   标准:P95 ≤ 300ms,错误率 ≤ 0.1%\n   不通过 → 回去优化\n\n🧪 Gate 3 · 功能测试\n   负责人:@全栈测试员\n   标准:P0/P1 Bug = 0,P2 ≤ 3 个\n   不通过 → 回去修\n\n👑 Gate 4 · 终审\n   负责人:@Final-Reviewer\n   标准:风险等级 ≤ LOW\n   不通过 → 全流程返工\n\n💡 产品经理的启示:\n需求评审、设计评审、灰度发布……本质都是门禁!",
+      "hashtags": "#质量保障 #软件测试 #代码审查 #产品经理 #性能优化 #DevOps"
+    }
+  },
+  {
+    "index": 5,
+    "filename": "05-blackboard.png",
+    "path": null,
+    "success": false,
+    "copy": {
+      "title": "📝 1 块黑板,解决 AI 的健忘病",
+      "hook": "AI 聊多了就忘事?给它配个外部硬盘就行",
+      "body": "你肯定遇到过:\nAI 写代码写到一半,前面说过啥全忘了,只能从头来?😩\n\nLoop Agent 的解法:把记忆从 AI 脑子里搬出来!\n\n📋 项目进度记录.md(黑板)长这样:\n\n## 【2026-06-17｜Phase 5 完成】\n### ✅ 已完成:后端 API + 前端组件\n### ⚠️ 不确定:性能是否达标\n### ❌ 待解决:数据库查询慢\n### 📋 下一步:进入 Gate 1 代码审查\n\n🎯 这套机制叫 Ralph 模式:\n• AI 每轮重置上下文,但状态全在黑板\n• 切换 AI 模型不丢进度\n• 新开会话先读黑板,自动续上记忆\n\n💡 PM 启示:你的团队也需要黑板!\n周报、Slack、Trello —— 重要信息不要只装人脑里!",
+      "hashtags": "#AI记忆 #团队协作 #信息管理 #产品经理 #VibeCoding #效率提升"
+    }
+  },
+  {
+    "index": 6,
+    "filename": "06-mcp-server.png",
+    "path": null,
+    "success": false,
+    "copy": {
+      "title": "🔌 MCP Server · AI 时代的 USB 标准",
+      "hook": "换 AI 模型就要重学一遍?这事儿被 MCP 终结了",
+      "body": "MCP = Model Context Protocol,AI 世界的 USB 接口!\n\n🤔 你可能听过这个痛点:\n今天用 Claude 写了一套 AI 工作流,\n明天想换 GPT,得重新写一遍调用代码 😭\n\n✨ Loop Agent 的解法:把调度逻辑全部包成 MCP Server!\n\n🎯 6 个标准动作,所有 AI 都能调:\n• start_loop 启动流水线\n• get_status 查进度\n• spawn_agent 派活给某个 AI 角色\n• save_blackboard 写黑板\n• list_agents 查花名册\n• abort_loop 紧急刹车\n\n🔓 好处:\n• 换 AI 不换流程(Claude→GPT→Gemini 都行)\n• 规矩由 Server 守,AI 不会偷懒或忘事\n• 多人多 AI 并行使用同一个 Server\n\n💡 产品经理启示:\n你的产品要不要 Agent 化?看有没有可被一句话描述的明确动作!",
+      "hashtags": "#MCP #AI工具 #产品经理 #VibeCoding #开源项目 #AI标准 #Claude"
+    }
+  },
+  {
+    "index": 7,
+    "filename": "07-unattended.png",
+    "path": null,
+    "success": false,
+    "copy": {
+      "title": "🌙 睡前说一声,明早直接拿成果",
+      "hook": "AI 自动写代码到天亮?这不是科幻,Loop Agent 已经实现",
+      "body": "打工人の终极梦想:躺着也能交付项目!\n\nLoop Agent 的无人值守模式做到了:\n\n⏰ 设定时间预算(默认 9 小时)\n🛏️ 跟 AI 说:今晚帮我做完这个 PRD,明早看结果\n🤖 AI 自动跑完全流程:\n   • 遇到不确定 → 自动决策\n   • 遇到错误 → 自动重试 / 回滚\n   • 撞预算 → 自动停止 + 报告\n📊 明早醒来:完整夜间作业报告摆在你面前\n\n🎯 适合场景:\n• 周末想跑个完整 Demo?\n• 周五下班前想启动一个功能?\n• 不想半夜被叫起来 review 代码?\n\n💡 6 条铁律:\n不中断、最小影响、完整执行、决策可审计、时间有预算、早晨有报告\n\n📌 适合:Vibe Coding 重度玩家、独立开发者、小团队",
+      "hashtags": "#无人值守 #AI编程 #VibeCoding #效率工具 #懒人神器 #自动化 #AI产品"
+    }
+  }
+]

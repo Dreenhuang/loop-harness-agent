@@ -1,0 +1,13 @@
+{
+  "description": "初始证据注册表 - 所有证据为空",
+  "created_at": "2026-06-16",
+  "evidence": {
+    "failing_test": [],
+    "passing_test": [],
+    "refactor_evidence": [],
+    "verification_commands": [],
+    "review_feedback": [],
+    "deploy_smoke_test": [],
+    "build_verification": []
+  }
+}

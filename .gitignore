@@ -1,0 +1,35 @@
+# Loop Agent 系统 .gitignore
+
+# 黑板运行时数据（不应提交）
+.blackboard/
+*.bak.md
+工作树/
+.worktrees/
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# 系统临时
+node_modules/
+dist/
+build/
+*.log
+.env
+.env.local
+
+# Trae IDE 临时
+.traesettings/
+
+# 注意：以下应该提交（核心资产）
+# .trae/rules/loop-agent.md ✅
+# .trae/rules/A2A消息速查卡.md ✅
+# .trae/skills/ ✅
+# .trae/agents/ ✅
+# .trae/workflows/ ✅
+# .trae/commands/ ✅
+# blackboard/templates/ ✅
+# domain-chips/ ✅
+# README.md ✅

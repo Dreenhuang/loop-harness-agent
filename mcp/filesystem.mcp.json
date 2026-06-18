@@ -1,0 +1,95 @@
+{
+  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/specification/main/schema/mcp-config.schema.json",
+  "name": "loop-agent-filesystem",
+  "version": "1.0.0",
+  "description": "Loop Agent Blackboard 文件系统访问 MCP",
+  "loop_agent_version": "v1.0",
+
+  "type": "mcp-server",
+  "transport": "stdio",
+
+  "command": "npx",
+  "args": [
+    "-y",
+    "@modelcontextprotocol/server-filesystem",
+    "./blackboard",
+    "./.trae",
+    "./workflows",
+    "./domain-chips",
+    "./docs"
+  ],
+
+  "capabilities": {
+    "resources": {
+      "read": true,
+      "write": true,
+      "list": true,
+      "watch": false
+    },
+    "tools": [
+      "read_file",
+      "write_file",
+      "edit_file",
+      "list_directory",
+      "search_files",
+      "create_directory",
+      "delete_file"
+    ]
+  },
+
+  "permissions": {
+    "read_paths": [
+      "./blackboard/**",
+      "./.trae/rules/**",
+      "./.trae/skills/**",
+      "./.trae/agents/**",
+      "./workflows/**",
+      "./domain-chips/**",
+      "./docs/**"
+    ],
+    "write_paths": [
+      "./blackboard/state.json",
+      "./blackboard/.snapshots/**",
+      "./blackboard/a2a/**",
+      "./blackboard/knowledge_index.json",
+      "./blackboard/logs/**"
+    ],
+    "forbidden_paths": [
+      "./.trae/rules/loop-agent.md",
+      "./blackboard/.snapshots/"
+    ]
+  },
+
+  "agent_visibility": {
+    "orchestrator": "read_write",
+    "product_manager": "read_write",
+    "requirements": "read_write",
+    "ux_researcher": "read_write",
+    "ui_designer": "read_write",
+    "architect": "read_write",
+    "backend": "read_write",
+    "frontend": "read_write",
+    "bug_defect_repairer": "read_write",
+    "code_reviewer": "read_only",
+    "professional_performance": "read_only",
+    "tester": "read_only",
+    "knowledge_curator": "read_write",
+    "documenter": "read_write",
+    "final_reviewer": "read_only",
+    "devops": "read_write"
+  },
+
+  "schema_validation": {
+    "enabled": true,
+    "blackboard_schema": "./workflows/schemas/blackboard.schema.json",
+    "task_input_schema": "./workflows/schemas/task-input.schema.json",
+    "task_output_schema": "./workflows/schemas/task-output.schema.json"
+  },
+
+  "metadata": {
+    "loop_agent_layer": 1,
+    "category": "infrastructure",
+    "required": true,
+    "fallback": "Native Trae file tools"
+  }
+}

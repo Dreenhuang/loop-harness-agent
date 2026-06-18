@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Phase ARCHITECTURE - 技术架构",
+  "version": "1.0.0",
+  "description": "架构设计 + 技术选型 + API 规范 + 数据流",
+
+  "phase": "ARCHITECTURE",
+  "order": 4,
+  "loop_agent_version": "v1.0",
+
+  "entry_conditions": ["REQUIREMENTS.completed"],
+
+  "tasks": [
+    {
+      "id": "T4-1",
+      "agent": "architect",
+      "action": "tech_stack_selection",
+      "input": ["blackboard/requirements/baseline-v1.0.json"],
+      "output": "blackboard/architecture/tech-stack.md",
+      "dependencies": []
+    },
+    {
+      "id": "T4-2",
+      "agent": "architect",
+      "action": "module_design",
+      "input": ["blackboard/architecture/tech-stack.md", "blackboard/requirements/baseline-v1.0.json"],
+      "output": "blackboard/architecture/modules.md",
+      "dependencies": ["T4-1"]
+    },
+    {
+      "id": "T4-3",
+      "agent": "architect",
+      "action": "api_spec",
+      "input": ["blackboard/architecture/modules.md"],
+      "output": "blackboard/architecture/openapi.yaml",
+      "dependencies": ["T4-2"]
+    },
+    {
+      "id": "T4-4",
+      "agent": "architect",
+      "action": "data_flow_design",
+      "input": ["blackboard/architecture/modules.md", "blackboard/architecture/openapi.yaml"],
+      "output": "blackboard/architecture/data-flow.md",
+      "dependencies": ["T4-2", "T4-3"]
+    },
+    {
+      "id": "T4-5",
+      "agent": "architect",
+      "action": "db_schema",
+      "input": ["blackboard/architecture/modules.md"],
+      "output": "blackboard/architecture/db-schema.sql",
+      "dependencies": ["T4-2"]
+    },
+    {
+      "id": "T4-6",
+      "agent": "architect",
+      "action": "risk_assessment",
+      "input": ["blackboard/architecture/tech-stack.md", "blackboard/architecture/modules.md"],
+      "output": "blackboard/architecture/risks.md",
+      "dependencies": ["T4-1", "T4-2"]
+    },
+    {
+      "id": "T4-7",
+      "agent": "architect",
+      "action": "baseline_validation",
+      "input": ["blackboard/requirements/baseline-v1.0.json", "blackboard/architecture/modules.md", "blackboard/architecture/openapi.yaml"],
+      "output": "blackboard/architecture/baseline-validation-report.md",
+      "dependencies": ["T4-2", "T4-3", "T4-6"]
+    }
+  ],
+
+  "exit_gate": "architecture_implementable AND api_spec_complete AND risks_documented",
+
+  "budget": { "cost_usd": 10, "iterations": 15 },
+
+  "prev_phase": "DESIGN",
+  "next_phase": "DEVELOPMENT"
+}

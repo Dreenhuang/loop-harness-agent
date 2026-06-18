@@ -1,0 +1,88 @@
+{
+  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/specification/main/schema/mcp-config.schema.json",
+  "name": "loop-agent-testing",
+  "version": "1.0.0",
+  "description": "Loop Agent 测试与性能压测 MCP（k6/Playwright/Jest/Lighthouse）",
+  "loop_agent_version": "v1.0",
+
+  "type": "mcp-server",
+  "transport": "stdio",
+
+  "command": "npx",
+  "args": [
+    "-y",
+    "@modelcontextprotocol/server-testing",
+    "--frameworks",
+    "jest,playwright,k6,lighthouse"
+  ],
+
+  "capabilities": {
+    "tools": [
+      "run_unit_tests",
+      "run_integration_tests",
+      "run_e2e_tests",
+      "run_security_scan",
+      "run_lighthouse_audit",
+      "run_load_test",
+      "run_accessibility_audit",
+      "run_coverage_report"
+    ]
+  },
+
+  "frameworks": {
+    "unit": {
+      "runner": "bun test",
+      "config": "./bunfig.toml",
+      "coverage_threshold": 80
+    },
+    "integration": {
+      "runner": "vitest",
+      "config": "./vitest.config.ts"
+    },
+    "e2e": {
+      "runner": "playwright",
+      "config": "./playwright.config.ts"
+    },
+    "load": {
+      "runner": "k6",
+      "config": "./tests/load/*.js",
+      "sla_p95_ms": 300,
+      "sla_error_rate": 0.001
+    },
+    "audit": {
+      "runner": "lighthouse",
+      "config": "./lighthouserc.json",
+      "min_score": 90
+    },
+    "security": {
+      "runner": "owasp-zap",
+      "baseline": "./tests/security/baseline.json"
+    }
+  },
+
+  "agent_visibility": {
+    "orchestrator": "read",
+    "product_manager": "none",
+    "requirements": "none",
+    "ux_researcher": "none",
+    "ui_designer": "none",
+    "architect": "none",
+    "backend": "read_write",
+    "frontend": "read_write",
+    "bug_defect_repairer": "read_write",
+    "code_reviewer": "read_write",
+    "professional_performance": "read_write",
+    "tester": "read_write",
+    "knowledge_curator": "none",
+    "documenter": "none",
+    "final_reviewer": "read",
+    "devops": "read_write"
+  },
+
+  "metadata": {
+    "loop_agent_layer": 1,
+    "category": "quality",
+    "required": false,
+    "fallback": "Manual test execution"
+  }
+}

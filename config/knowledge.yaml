@@ -1,0 +1,90 @@
+# =============================================================================
+# Loop Agent · 知识库配置
+# =============================================================================
+# 版本：v1.0
+# 生效日期：2026-06-15
+# =============================================================================
+
+version: "1.0"
+loop_agent_version: "v1.0"
+
+# 知识库基本配置
+knowledge_base:
+  enabled: true
+  auto_extract: true
+  auto_match_threshold: 0.85
+
+# 知识条目分类
+categories:
+  - id: problem_solutions
+    name: "问题解决方案库"
+    description: "Bug 根因 + 修复方案 + 预防措施"
+    path: ./docs/knowledge/problems/
+    trigger: "Bug 修复完成"
+    reuse: "相似 Bug 自动匹配"
+
+  - id: architecture_decisions
+    name: "架构决策库"
+    description: "技术选型 + 决策依据 + trade-off"
+    path: ./docs/knowledge/architectures/
+    trigger: "架构评审完成"
+    reuse: "同类项目自动推荐"
+
+  - id: reusable_components
+    name: "可复用组件库"
+    description: "通用组件 + 模板 + 代码片段"
+    path: ./docs/knowledge/components/
+    trigger: "通用代码识别"
+    reuse: "开发时自动推荐"
+
+  - id: best_practices
+    name: "最佳实践库"
+    description: "编码规范 + 设计模式 + 优化技巧"
+    path: ./docs/knowledge/best-practices/
+    trigger: "Code Review 发现"
+    reuse: "CR 时自动提示"
+
+  - id: pitfalls
+    name: "踩坑记录库"
+    description: "反模式 + 陷阱 + 教训"
+    path: ./docs/knowledge/pitfalls/
+    trigger: "失败 / 回滚事件"
+    reuse: "风险点自动预警"
+
+# 索引文件
+index:
+  path: ./blackboard/knowledge_index.json
+  format: "json"
+  auto_update: true
+
+# 相似度匹配算法
+matching:
+  algorithm: "vector_similarity + keyword"
+  embedding_model: "text-embedding-3-small"
+  threshold: 0.85
+  max_results: 3
+  fallback: "keyword_search"
+
+# 6 段式知识条目模板（与 问题解决经验文档管理规则 对齐）
+template:
+  sections:
+    - "1. 问题概述"
+    - "2. 根因分析"
+    - "3. 解决方案"
+    - "4. 验证清单"
+    - "5. 预防措施"
+    - "6. 经验总结"
+  format: "markdown"
+  storage: "docs/knowledge/{category}/YYYY-MM-DD-{title}.md"
+
+# 自动化触发
+automation:
+  on_bug_fix:
+    action: "auto_create_entry"
+    target_agent: "knowledge_curator"
+  on_architecture_decision:
+    action: "auto_create_entry"
+    target_agent: "knowledge_curator"
+  on_test_failure:
+    action: "auto_check_match"
+    fallback: "auto_create_entry"

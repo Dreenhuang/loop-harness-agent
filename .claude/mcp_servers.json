@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "loop-agent": {
+      "command": "node",
+      "args": [
+        "G:\\ai-gongju\\Loop-agent\\loop-agent-mcp\\dist\\index.js",
+        "G:\\ai-gongju\\Loop-agent"
+      ],
+      "env": {},
+      "description": "Loop Agent Orchestrator - 10 相位 + 16 角色 + 4 门禁"
+    }
+  }
+}

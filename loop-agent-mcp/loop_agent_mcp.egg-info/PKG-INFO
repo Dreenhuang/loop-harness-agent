@@ -1,0 +1,220 @@
+Metadata-Version: 2.4
+Name: loop-agent-mcp
+Version: 1.2.0
+Summary: Loop-Harness-Agent MCP Server：融合 Boss-auto-harness 的 16 角色 / 10 Phase / 4 Gate 全自动闭环执行引擎
+Author: Loop-Harness-Agent Team
+License: MIT
+Project-URL: Source, https://example.com/loop-harness-agent
+Project-URL: Workspace, https://example.com/loop-harness-agent
+Keywords: mcp,agent,loop,harness,orchestrator,blackboard
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: mcp>=1.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21; extra == "dev"
+Requires-Dist: pytest-cov>=4.0; extra == "dev"
+Requires-Dist: mypy>=1.0; extra == "dev"
+Provides-Extra: all
+Requires-Dist: loop-agent-mcp[dev]; extra == "all"
+
+# Loop-Harness-Agent MCP Server
+
+> **Loop Agent 模式的 MCP Server 实现 · 融合 Boss-auto-harness · v1.2**
+
+将 Loop-Harness-Agent 的 16 角色 / 10 Phase / 4 Gate / 黑板 / 融合验收 暴露为 12 个 MCP 工具，跨 Trae IDE、Claude Code、Cursor 等任何 MCP 客户端可用。
+
+---
+
+## 一、这是什么
+
+- **来源项目**：`g:\ai-gongju\Loop-agent`（Loop-Harness-Agent 模式 v1.2）
+- **融合验收标准**：`g:\ai-gongju\Loop-agent\docs\integration\融合验收标准.md`
+- **工作流蓝图**：`g:\ai-gongju\Loop-agent\.trae\workflows\prd-to-production.json`
+- **角色定义**：`g:\ai-gongju\Loop-agent\.trae\agents\*.agent.toml`（16 个）
+
+这是一个**进程内 stdio MCP Server**，把 Loop-Harness-Agent 的全部编排能力封装为标准 MCP 工具，对外只暴露少量原子能力，避免污染客户端 LLM 上下文。
+
+---
+
+## 二、12 个对外工具
+
+| # | 工具 | 职责 |
+|---|------|------|
+| 1 | `start_loop` | 启动 / 恢复 Loop |
+| 2 | `get_status` | 查询 Loop 完整状态（隐式读黑板）|
+| 3 | `abort_loop` | 中止当前 Loop |
+| 4 | `list_agents` | 列出 16 角色 + harness_discipline 摘要 |
+| 5 | `spawn_agent` | 向指定 Agent 派发任务（自动应用 harness_discipline）|
+| 6 | `save_blackboard` | 保存 / 追加 `项目进度记录.md` |
+| 7 | `check_artifact_completeness` | 12 个强制工件完整性检查 |
+| 8 | `check_evidence_sufficiency` | 5 类强制证据充分性检查 |
+| 9 | `detect_deviation` | 5 类偏离检测 + 一票否决扫描 |
+| 10 | `check_veto_items` | 6 项一票否决专项检查 |
+| 11 | `check_fusion_targets` | 5 大融合目标达成度评估 |
+| 12 | `get_token_budget_status` | Token 预算与效率状态 |
+
+---
+
+## 三、安装
+
+### 方式 1：本地可编辑安装（推荐）
+
+```bash
+cd g:/ai-gongju/Loop-agent/loop-agent-mcp
+pip install -e .
+```
+
+### 方式 2：直接安装
+
+```bash
+pip install mcp>=1.0.0
+```
+
+---
+
+## 四、注册到 MCP 客户端
+
+### Trae IDE
+
+`%APPDATA%\Trae\User\mcp.json`（或 IDE 内 MCP 设置）：
+
+```json
+{
+  "mcpServers": {
+    "loop-harness-agent": {
+      "command": "python",
+      "args": ["-m", "loop_agent_mcp.server"],
+      "cwd": "g:/ai-gongju/Loop-agent/loop-agent-mcp"
+    }
+  }
+}
+```
+
+### Claude Code
+
+```bash
+claude mcp add loop-harness-agent \
+  --command "python -m loop_agent_mcp.server" \
+  --cwd "g:/ai-gongju/Loop-agent/loop-agent-mcp"
+```
+
+### Cursor
+
+`~/.cursor/mcp.json`：
+
+```json
+{
+  "mcpServers": {
+    "loop-harness-agent": {
+      "command": "python",
+      "args": ["-m", "loop_agent_mcp.server"],
+      "cwd": "g:/ai-gongju/Loop-agent/loop-agent-mcp"
+    }
+  }
+}
+```
+
+---
+
+## 五、典型调用流程
+
+```
+1. start_loop({ time_budget_hours: 4, mode: "default" })
+   → 返回 loop_id
+
+2. list_agents({})
+   → 返回 16 角色清单
+
+3. spawn_agent({ agent_name: "product-manager", task_input: {prd_path: "..."} })
+   → 应用 harness_discipline
+   → 返回 next_step_hint
+
+4. check_artifact_completeness({})
+   → 实时检查 12 个强制工件状态
+
+5. save_blackboard({ append_section: "..." })
+   → 追加本轮日志
+
+6. detect_deviation({})
+   → 5 类偏离 + 一票否决扫描
+
+7. check_fusion_targets({})
+   → 5 大融合目标评估
+
+8. get_token_budget_status({})
+   → Token 消耗与效率
+
+9. abort_loop({ reason: "deployment_done" })
+   → 正常结束
+```
+
+---
+
+## 六、测试
+
+```bash
+cd g:/ai-gongju/Loop-agent/loop-agent-mcp
+pip install -e ".[dev]"
+pytest -v
+```
+
+预期：全部测试通过（≥ 30 个测试用例）。
+
+---
+
+## 七、目录结构
+
+```
+g:/ai-gongju/Loop-agent/loop-agent-mcp/
+├── pyproject.toml                # 包配置与依赖
+├── README.md                     # 本文档
+├── loop_agent_mcp/               # 主包
+│   ├── __init__.py               # 版本与元数据
+│   ├── server.py                 # MCP Server stdio 入口
+│   ├── core/                     # 核心：配置、状态
+│   │   ├── config.py             #   16 角色、10 Phase、4 Gate 常量；资产加载
+│   │   └── state.py              #   线程安全单例 StateManager
+│   ├── engines/                  # 业务引擎
+│   │   ├── orchestrator.py       #   Loop 主调度：start/advance/run_gate/spawn
+│   │   ├── blackboard.py         #   黑板读写
+│   │   ├── evidence.py           #   证据登记与查询
+│   │   ├── deviation.py          #   偏离检测与一票否决
+│   │   ├── token.py              #   Token 治理与摘要
+│   │   └── fusion.py             #   5 大融合目标 + 工件/证据/否决检查
+│   └── tools/                    # MCP 工具层
+│       ├── schemas.py            #   12 个工具的输入输出 schema
+│       └── dispatcher.py         #   工具调用统一路由
+└── tests/                        # 单元测试
+    └── test_engines.py           #   30+ 测试用例
+```
+
+---
+
+## 八、融合 v1.2 关键能力
+
+- ✅ 全自动闭环：start_loop → advance_phase → run_gate → save_blackboard 链式调用
+- ✅ 生产级交付：check_artifact_completeness 阻断 12 工件缺失
+- ✅ 直接部署：check_fusion_targets 校验 deploy_smoke_test 证据
+- ✅ Token 效率：get_token_budget_status 实时监控，黑板优先策略
+- ✅ 流程收敛：detect_deviation + check_veto_items 防 6 类偏离
+
+---
+
+## 九、版本
+
+| 版本 | 日期 | 核心变更 |
+|------|------|----------|
+| 1.0.0 | 2026-06-15 | 初始版本：Loop Agent MCP Server 骨架 |
+| 1.2.0 | 2026-06-16 | 融合 Boss-auto-harness v1.2：12 工具 + 5 引擎 + 完整测试 |
+
+---
+
+**【Loop-Harness-Agent MCP Server v1.2 · 融合 Boss-auto-harness · 生效中】**

@@ -1,0 +1,25 @@
+{
+  "name": "loop-agent-mcp",
+  "version": "1.0.0",
+  "description": "Loop Agent MCP Server for Claude Code",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "loop-agent-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
