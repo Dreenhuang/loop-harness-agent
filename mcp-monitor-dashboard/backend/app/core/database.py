@@ -12,10 +12,17 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 # Create data directory if not exists
-os.makedirs("data", exist_ok=True)
+data_dir = os.path.dirname(settings.database_url.replace("sqlite:///", ""))
+if data_dir:
+    os.makedirs(data_dir, exist_ok=True)
 
 # Use synchronous SQLite for simplicity (can upgrade to async later)
-DATABASE_URL = settings.database_url.replace("sqlite://", "sqlite:///")
+# Handle SQLite URL properly
+if settings.database_url.startswith("sqlite:///"):
+    # Already has correct format, use as-is
+    DATABASE_URL = settings.database_url
+else:
+    DATABASE_URL = settings.database_url.replace("sqlite://", "sqlite:///")
 
 engine = None
 SessionLocal = None
