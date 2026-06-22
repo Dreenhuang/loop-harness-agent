@@ -1,9 +1,9 @@
-"""MCP 工具 schema 定义：12 个工具的输入输出规范。"""
+"""MCP 工具 schema 定义：13 个工具的输入输出规范。"""
 from __future__ import annotations
 
 from typing import Any
 
-# 12 个对外工具的 schema（按融合 v1.2 设计）
+# 13 个对外工具的 schema（按融合 v1.2 设计）
 TOOL_SCHEMAS: list[dict[str, Any]] = [
     {
         "name": "start_loop",
@@ -167,5 +167,14 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                 "workspace": {"type": "string", "description": "工作区路径（可选）"},
             },
         },
+    },
+    # 融合 v1.3.1 新增：Dashboard 信息工具
+    {
+        "name": "get_dashboard_info",
+        "description": "获取 MCP Monitor Dashboard 的访问信息（URL、状态、版本）",
+        "inputSchema": {
+            "type": "object",
+            "properties": {}
+        }
     },
 ]

@@ -6,12 +6,43 @@ import subprocess
 import signal
 import logging
 import time
+import os
+import re
 import shlex
 from typing import Optional
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+# Shell metacharacters that must never appear in command arguments or paths
+_SHELL_DANGEROUS_CHARS = re.compile(r'[;|&$`><\(\)\{\}\'"\\!\n\r]')
+
+
+def _validate_path_safety(path: str) -> str:
+    """Validate that a file path contains no shell injection characters.
+
+    Returns the cleaned path or raises ValueError.
+    """
+    if not path or not path.strip():
+        raise ValueError("Empty path")
+    if _SHELL_DANGEROUS_CHARS.search(path):
+        raise ValueError(f"Path contains forbidden shell characters: {path!r}")
+    return path
+
+
+def _validate_pid_safety(pid) -> int:
+    """Validate that a PID is a pure positive integer.
+
+    Returns the validated int PID or raises ValueError.
+    """
+    pid_str = str(pid).strip()
+    if not pid_str.isdigit():
+        raise ValueError(f"Invalid PID (not a positive integer): {pid!r}")
+    pid_int = int(pid_str)
+    if pid_int <= 0 or pid_int > 4194304:
+        raise ValueError(f"Invalid PID (out of range): {pid_int}")
+    return pid_int
 
 
 class ProcessManagerService:
@@ -42,18 +73,21 @@ class ProcessManagerService:
         return int(time.time() - self._start_time)
 
     def _parse_command(self, cmd: str) -> list:
-        """Safely parse command string into argument list using shlex."""
+        """Safely parse command string into argument list using shlex.
+
+        Raises ValueError if dangerous shell metacharacters are detected.
+        """
         try:
             parsed = shlex.split(cmd)
             if not parsed:
                 raise ValueError("Empty command after parsing")
-            # Basic safety check: reject suspicious patterns
+            # Security: reject any argument containing shell metacharacters
             for arg in parsed:
-                if any(dangerous in arg for dangerous in [';', '&', '|', '$(', '`', '>', '<']):
-                    logger.warning(f"⚠️ Potentially dangerous command pattern detected in: {arg}")
+                if _SHELL_DANGEROUS_CHARS.search(arg):
+                    raise ValueError(f"Dangerous shell pattern detected in argument: {arg!r}")
             return parsed
         except ValueError as e:
-            logger.error(f"❌ Failed to parse command '{cmd}': {e}")
+            logger.error(f"Command parse rejected for '{cmd}': {e}")
             raise
 
     def start(self) -> dict:
@@ -72,6 +106,8 @@ class ProcessManagerService:
             # Safely parse and execute command (never use shell=True)
             cmd_args = self._parse_command(cmd_str)
             cwd = settings.mcp_server_cwd or "."
+            # Security: validate working directory path for shell injection
+            cwd = _validate_path_safety(cwd)
             self._process = subprocess.Popen(
                 cmd_args,
                 shell=False,  # Always shell=False for security
@@ -119,6 +155,9 @@ class ProcessManagerService:
 
         try:
             pid_to_stop = self._pid
+            # Security: validate PID is a pure positive integer
+            if pid_to_stop is not None:
+                pid_to_stop = _validate_pid_safety(pid_to_stop)
 
             if self._process:
                 if force:

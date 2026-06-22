@@ -9,6 +9,9 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import List
 
+# Default API key used in tests (matches auth.py default)
+TEST_API_KEY = "dev-api-key-change-in-production"
+
 
 @pytest.fixture(scope="session", autouse=True)
 def init_database():
@@ -41,7 +44,7 @@ class TestAPIResponseTime:
         """Agents endpoint should respond within 500ms."""
         from fastapi.testclient import TestClient
         from app.main import app
-        client = TestClient(app)
+        client = TestClient(app, headers={"X-API-Key": TEST_API_KEY})
 
         start = time.time()
         response = client.get("/api/v1/agents")
@@ -54,7 +57,7 @@ class TestAPIResponseTime:
         """Logs endpoint should respond within 500ms."""
         from fastapi.testclient import TestClient
         from app.main import app
-        client = TestClient(app)
+        client = TestClient(app, headers={"X-API-Key": TEST_API_KEY})
 
         start = time.time()
         response = client.get("/api/v1/logs?page=1&page_size=50")
@@ -67,7 +70,7 @@ class TestAPIResponseTime:
         """Project overview endpoint should respond within 500ms."""
         from fastapi.testclient import TestClient
         from app.main import app
-        client = TestClient(app)
+        client = TestClient(app, headers={"X-API-Key": TEST_API_KEY})
 
         start = time.time()
         response = client.get("/api/v1/project/overview")
@@ -103,7 +106,7 @@ class TestConcurrentRequests:
         from app.main import app
 
         def make_request():
-            client = TestClient(app)
+            client = TestClient(app, headers={"X-API-Key": TEST_API_KEY})
             return client.get("/api/v1/agents").status_code
 
         with ThreadPoolExecutor(max_workers=20) as executor:

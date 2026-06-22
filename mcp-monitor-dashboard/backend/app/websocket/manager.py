@@ -222,6 +222,16 @@ async def websocket_endpoint(websocket: WebSocket):
     """
     from app.services.data_collector import collector_service
     from app.config import settings
+    from app.core.auth import validate_ws_api_key
+
+    # Validate API key before accepting connection
+    if not validate_ws_api_key(websocket):
+        logger.warning(f"WS connection rejected: invalid or missing API key from {websocket.client.host if websocket.client else 'unknown'}")
+        try:
+            await websocket.close(code=1008, reason="Authentication failed")
+        except Exception:
+            pass
+        return
 
     conn_id = -1
     try:

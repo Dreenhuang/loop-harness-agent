@@ -11,12 +11,25 @@ from unittest.mock import Mock, patch, AsyncMock, MagicMock
 
 # ==================== Test Configuration ====================
 
+# Default API key used in tests (matches auth.py default)
+TEST_API_KEY = "dev-api-key-change-in-production"
+
+
 @pytest.fixture(scope="session")
 def event_loop():
     """Create event loop for async tests."""
     loop = asyncio.new_event_loop()
     yield loop
     loop.close()
+
+
+@pytest.fixture
+def auth_client():
+    """TestClient with API key authentication headers."""
+    from fastapi.testclient import TestClient
+    from app.main import app
+    client = TestClient(app, headers={"X-API-Key": TEST_API_KEY})
+    return client
 
 
 # ==================== 1. API Endpoint Tests ====================
@@ -50,7 +63,7 @@ class TestAgentAPI:
     """Test agent-related API endpoints."""
 
     @patch('app.services.data_collector.collector_service')
-    def test_get_all_agents_success(self, mock_collector):
+    def test_get_all_agents_success(self, mock_collector, auth_client):
         """GET /api/v1/agents should return all agents."""
         mock_collector.collect_all.return_value = {
             "agents": [
@@ -60,10 +73,7 @@ class TestAgentAPI:
             "timestamp": datetime.utcnow().isoformat()
         }
 
-        from fastapi.testclient import TestClient
-        from app.main import app
-        client = TestClient(app)
-        response = client.get("/api/v1/agents")
+        response = auth_client.get("/api/v1/agents")
         assert response.status_code == 200
         data = response.json()
         assert data["code"] == 0
@@ -71,7 +81,7 @@ class TestAgentAPI:
         assert "data" in data
 
     @patch('app.services.data_collector.collector_service')
-    def test_get_agent_detail_not_found(self, mock_collector):
+    def test_get_agent_detail_not_found(self, mock_collector, auth_client):
         """GET /api/v1/agents/{id} should 404 for unknown agent."""
         mock_collector.collect_all.return_value = {
             "agents": [],
@@ -79,10 +89,7 @@ class TestAgentAPI:
             "timestamp": datetime.utcnow().isoformat()
         }
 
-        from fastapi.testclient import TestClient
-        from app.main import app
-        client = TestClient(app)
-        response = client.get("/api/v1/agents/nonexistent")
+        response = auth_client.get("/api/v1/agents/nonexistent")
         assert response.status_code == 404
 
 
@@ -90,7 +97,7 @@ class TestLogAPI:
     """Test log query API endpoints."""
 
     @patch('app.api.logs.collector_service')
-    def test_get_logs_with_pagination(self, mock_collector):
+    def test_get_logs_with_pagination(self, mock_collector, auth_client):
         """GET /api/v1/logs should support pagination parameters."""
         mock_collector.get_logs.return_value = {
             "items": [],
@@ -100,17 +107,14 @@ class TestLogAPI:
             "total_pages": 0
         }
 
-        from fastapi.testclient import TestClient
-        from app.main import app
-        client = TestClient(app)
-        response = client.get("/api/v1/logs?page=1&page_size=10")
+        response = auth_client.get("/api/v1/logs?page=1&page_size=10")
         assert response.status_code == 200
         data = response.json()
         assert data["code"] == 0
         assert "data" in data
 
     @patch('app.api.logs.collector_service')
-    def test_get_logs_filter_by_level(self, mock_collector):
+    def test_get_logs_filter_by_level(self, mock_collector, auth_client):
         """GET /api/v1/logs should filter by log level."""
         mock_collector.get_logs.return_value = {
             "items": [{"level": "error", "message": "test"}],
@@ -120,10 +124,7 @@ class TestLogAPI:
             "total_pages": 1
         }
 
-        from fastapi.testclient import TestClient
-        from app.main import app
-        client = TestClient(app)
-        response = client.get("/api/v1/logs?level=error")
+        response = auth_client.get("/api/v1/logs?level=error")
         assert response.status_code == 200
 
 
@@ -131,42 +132,33 @@ class TestSystemControlAPI:
     """Test system control (start/stop/restart) API endpoints."""
 
     @patch('app.api.system.process_manager')
-    def test_start_mcp_server(self, mock_pm):
+    def test_start_mcp_server(self, mock_pm, auth_client):
         """POST /api/v1/system/start should start MCP server."""
         mock_pm.start.return_value = {"success": True, "pid": 12345}
 
-        from fastapi.testclient import TestClient
-        from app.main import app
-        client = TestClient(app)
-        response = client.post("/api/v1/system/start")
+        response = auth_client.post("/api/v1/system/start")
         assert response.status_code == 200
         data = response.json()
         assert data["code"] == 0
         mock_pm.start.assert_called_once()
 
     @patch('app.api.system.process_manager')
-    def test_stop_mcp_server(self, mock_pm):
+    def test_stop_mcp_server(self, mock_pm, auth_client):
         """POST /api/v1/system/stop should stop MCP server."""
         mock_pm.stop.return_value = {"success": True}
 
-        from fastapi.testclient import TestClient
-        from app.main import app
-        client = TestClient(app)
-        response = client.post("/api/v1/system/stop", json={"force": False})
+        response = auth_client.post("/api/v1/system/stop", json={"force": False})
         assert response.status_code == 200
         data = response.json()
         assert data["code"] == 0
 
     @patch('app.api.system.process_manager')
-    def test_get_system_status(self, mock_pm):
+    def test_get_system_status(self, mock_pm, auth_client):
         """GET /api/v1/system/status should return system status."""
         mock_pm.get_status.return_value = {"running": True, "pid": 12345}
         mock_pm.uptime_seconds = 3600
 
-        from fastapi.testclient import TestClient
-        from app.main import app
-        client = TestClient(app)
-        response = client.get("/api/v1/system/status")
+        response = auth_client.get("/api/v1/system/status")
         assert response.status_code == 200
         data = response.json()
         assert data["code"] == 0
@@ -178,7 +170,7 @@ class TestProjectAPI:
     """Test project overview API endpoints."""
 
     @patch('app.api.project.collector_service')
-    def test_get_project_overview(self, mock_collector):
+    def test_get_project_overview(self, mock_collector, auth_client):
         """GET /api/v1/project/overview should return project info."""
         mock_collector.collect_all.return_value = {
             "agents": [],
@@ -190,10 +182,7 @@ class TestProjectAPI:
             "timestamp": datetime.utcnow().isoformat()
         }
 
-        from fastapi.testclient import TestClient
-        from app.main import app
-        client = TestClient(app)
-        response = client.get("/api/v1/project/overview")
+        response = auth_client.get("/api/v1/project/overview")
         assert response.status_code == 200
         data = response.json()
         assert data["code"] == 0
@@ -302,7 +291,7 @@ class TestWebSocketIntegration:
         from app.main import app
 
         client = TestClient(app)
-        with client.websocket_connect("/ws") as ws:
+        with client.websocket_connect(f"/ws?api_key={TEST_API_KEY}") as ws:
             ws.send_json({"type": "subscribe", "channels": ["agent_status", "overview"]})
             msg = ws.receive_json()
 
@@ -317,7 +306,7 @@ class TestWebSocketIntegration:
         from app.main import app
 
         client = TestClient(app)
-        with client.websocket_connect("/ws") as ws:
+        with client.websocket_connect(f"/ws?api_key={TEST_API_KEY}") as ws:
             ws.send_json({"type": "ping"})
             msg = ws.receive_json()
             assert msg["type"] == "pong"
@@ -328,7 +317,7 @@ class TestWebSocketIntegration:
         from app.main import app
 
         client = TestClient(app)
-        with client.websocket_connect("/ws") as ws:
+        with client.websocket_connect(f"/ws?api_key={TEST_API_KEY}") as ws:
             ws.send_text("not-json")
             msg = ws.receive_json()
             assert msg["type"] == "error"
@@ -396,12 +385,12 @@ class TestProcessManagerService:
         assert result == ["python", "-m", "loop_agent_mcp.server"]
 
     def test_parse_command_rejects_dangerous_patterns(self):
-        """_parse_command() should warn about dangerous patterns but still parse."""
+        """_parse_command() should raise ValueError for dangerous patterns."""
         from app.services.process_manager import ProcessManagerService
         pm = ProcessManagerService()
-        # Should still parse but log warning
-        result = pm._parse_command("python script.py; rm -rf /")
-        assert result is not None
+        # Should raise ValueError when dangerous patterns are detected
+        with pytest.raises(ValueError, match="Dangerous shell pattern"):
+            pm._parse_command("python script.py; rm -rf /")
 
     def test_parse_command_empty_raises(self):
         """_parse_command() should raise ValueError for empty command."""

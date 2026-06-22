@@ -13,14 +13,32 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import sys
 import time
 from datetime import datetime
 from typing import Any, ClassVar
 
 
-# 敏感字段（自动脱敏）
-SENSITIVE_FIELDS = frozenset({"content", "password", "token", "secret", "api_key", "authorization"})
+# 敏感字段（自动脱敏）- G-4 修复：扩展敏感 key 列表
+SENSITIVE_FIELDS = frozenset({
+    "content", "password", "token", "secret", "api_key", "authorization",
+    "cookie", "session", "private_key", "access_token",
+})
+
+# URL 参数脱敏正则 - G-4 修复：匹配 URL 中的敏感参数
+_URL_SENSITIVE_PATTERN = re.compile(
+    r"((?:password|token|secret|api_key|authorization|cookie|session|private_key|access_key)"
+    r"[=:])"
+    r"([^&\s\"']+)",
+    re.IGNORECASE,
+)
+
+# 异常堆栈最大保留字符数
+_MAX_EXCEPTION_STACK_LENGTH = 500
+
+# 递归脱敏最大深度
+_MAX_SANITIZE_DEPTH = 10
 
 
 class JsonFormatter(logging.Formatter):
@@ -80,14 +98,49 @@ logger = logging.getLogger("loop_agent_mcp.dispatcher")
 audit_logger = logging.getLogger("loop_agent_mcp.audit")
 
 
+def _sanitize_recursive(obj: Any, sensitive_keys: frozenset[str], max_depth: int = _MAX_SANITIZE_DEPTH, _current_depth: int = 0) -> Any:
+    """递归脱敏处理：支持嵌套字典、列表、字符串中的 URL 参数。
+    
+    Args:
+        obj: 待脱敏对象
+        sensitive_keys: 敏感 key 集合
+        max_depth: 最大递归深度
+        _current_depth: 当前深度（内部使用）
+    
+    Returns:
+        脱敏后的对象
+    """
+    if _current_depth >= max_depth:
+        return obj
+    
+    # 字典：递归处理每个 value
+    if isinstance(obj, dict):
+        return {
+            k: ("***REDACTED***" if k.lower() in sensitive_keys 
+                else _sanitize_recursive(v, sensitive_keys, max_depth, _current_depth + 1))
+            for k, v in obj.items()
+        }
+    
+    # 列表：递归处理每个元素
+    if isinstance(obj, list):
+        return [_sanitize_recursive(item, sensitive_keys, max_depth, _current_depth + 1) for item in obj]
+    
+    # 字符串：对 URL 参数做正则脱敏
+    if isinstance(obj, str):
+        # 截断异常堆栈（如果包含 Traceback）
+        if "Traceback" in obj and len(obj) > _MAX_EXCEPTION_STACK_LENGTH:
+            obj = obj[:_MAX_EXCEPTION_STACK_LENGTH] + "... [TRUNCATED]"
+        # URL 参数脱敏
+        return _URL_SENSITIVE_PATTERN.sub(r"\1***REDACTED***", obj)
+    
+    return obj
+
+
 def _sanitize_args(arguments: dict[str, Any]) -> dict[str, Any]:
-    """脱敏处理：移除敏感字段。"""
+    """脱敏处理：移除敏感字段（支持嵌套结构和 URL 参数）。"""
     if not isinstance(arguments, dict):
         return arguments
-    return {
-        k: ("***REDACTED***" if k.lower() in SENSITIVE_FIELDS else v)
-        for k, v in arguments.items()
-    }
+    return _sanitize_recursive(arguments, SENSITIVE_FIELDS)
 
 
 class ToolAuditLogger:

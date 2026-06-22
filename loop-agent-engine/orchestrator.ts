@@ -15,6 +15,11 @@
  *   - Agent Loop Engineering 深度解读报告.md
  */
 
+import { promises as fs } from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import { spawn } from "child_process";
+
 // =============================================================================
 // 类型定义
 // =============================================================================
@@ -150,7 +155,12 @@ export interface FusionMetrics {
 // =============================================================================
 
 export class OrchestratorStateMachine {
-  private readonly BLACKBOARD_PATH = "./blackboard/state.json";
+  // 基于当前模块位置解析项目根目录，保证无论从哪个 cwd 启动都能找到 blackboard
+  private readonly PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  private readonly BLACKBOARD_DIR = path.join(this.PROJECT_ROOT, "blackboard");
+  private readonly BLACKBOARD_PATH = path.join(this.BLACKBOARD_DIR, "state.json");
+  private readonly TASKS_DIR = path.join(this.BLACKBOARD_DIR, "tasks");
+  private readonly WORKER_SCRIPT = path.join(path.dirname(fileURLToPath(import.meta.url)), "agent-worker.ts");
   private readonly MAX_PARALLEL_TASKS = 16;
   private previousErrorFingerprints: string[] = [];
 
@@ -266,10 +276,19 @@ export class OrchestratorStateMachine {
 
   /**
    * 并行扇出：分派任务给 Specialist Agent
+   *
+   * 实现说明：
+   * 1. 为每个任务生成 blackboard/tasks/{taskId}.json 描述文件
+   * 2. 通过 child_process.spawn 启动 loop-agent-engine/agent-worker.ts 子进程
+   * 3. 子进程模拟执行（sleep 1s）后写回任务文件
+   * 4. 主进程监听 exit 事件，调用 onTaskComplete 更新 PipelineState
    */
   private async spawnAgents(tasks: TaskState[]): Promise<void> {
     const batch = tasks.slice(0, this.MAX_PARALLEL_TASKS);
     console.log(`[Spawn] 扇出 ${batch.length} 个并行任务（最多 ${this.MAX_PARALLEL_TASKS}）`);
+
+    // 确保任务目录存在
+    await fs.mkdir(this.TASKS_DIR, { recursive: true });
 
     for (const task of batch) {
       task.status = "RUNNING";
@@ -284,7 +303,7 @@ export class OrchestratorStateMachine {
       );
       console.log(`  → [Harness] Protocol: steps=${harnessProtocol.required_harness_steps.join(",") || "none"}, artifacts=${harnessProtocol.required_artifacts.join(",") || "none"}`);
 
-      // 模拟 Agent 调用（实际环境由 Trae.spawnAgent 触发）
+      // 构造 Agent 最小输入
       const input: AgentInput = {
         taskId: task.id,
         inputPaths: task.inputPaths,
@@ -296,13 +315,36 @@ export class OrchestratorStateMachine {
       console.log(`     Input: ${task.inputPaths.join(", ")}`);
       console.log(`     Output: ${task.outputPath}`);
 
-      // 实际生产环境替换为：
-      // await trae.spawnAgent({
-      //   agent: task.agentType,
-      //   input,
-      //   isolation: "process",
-      //   worktree: task.worktree,
-      // });
+      // 写入任务描述文件
+      const taskFile = path.join(this.TASKS_DIR, `${task.id}.json`);
+      const taskPayload = {
+        ...input,
+        agentType: task.agentType,
+        phase: task.phase,
+        status: "RUNNING",
+        startedAt: task.startedAt,
+      };
+      await fs.writeFile(taskFile, JSON.stringify(taskPayload, null, 2));
+
+      // 启动 worker 子进程（Bun 运行时）
+      // 使用 process.execPath 确保使用与当前进程相同的 Bun 可执行文件，避免依赖 PATH
+      const worker = spawn(process.execPath, [this.WORKER_SCRIPT, task.id], {
+        stdio: "inherit",
+        detached: false,
+      });
+
+      worker.on("error", (err) => {
+        console.error(`[Spawn] Worker for task ${task.id} failed to start:`, err.message);
+        this.onTaskComplete(task.id, false, `Worker spawn error: ${err.message}`).catch(console.error);
+      });
+
+      worker.on("exit", (code) => {
+        const success = code === 0;
+        if (!success) {
+          console.error(`[Spawn] Worker for task ${task.id} exited with code ${code}`);
+        }
+        this.onTaskComplete(task.id, success, success ? undefined : `Worker exited with code ${code}`).catch(console.error);
+      });
     }
   }
 
@@ -365,19 +407,47 @@ export class OrchestratorStateMachine {
   }
 
   /**
-   * 保存状态到黑板
+   * 保存状态到黑板（真实写入 blackboard/state.json）
    */
   private async saveState(state: PipelineState): Promise<void> {
-    // 实际生产环境写入 blackboard/state.json
+    await fs.mkdir(this.BLACKBOARD_DIR, { recursive: true });
+    await fs.writeFile(
+      this.BLACKBOARD_PATH,
+      JSON.stringify(state, null, 2),
+      "utf-8"
+    );
     console.log(`[Persist] state.json 已更新 (phase=${state.phase}, iter=${state.budget.currentIteration})`);
   }
 
   /**
-   * 加载状态从黑板
+   * 从黑板加载状态；不存在时返回初始状态并自动创建目录
    */
-  static async loadState(path?: string): Promise<PipelineState> {
-    // 实际生产环境从 blackboard/state.json 读取
-    // 这里返回初始状态
+  static async loadState(loadPath?: string): Promise<PipelineState> {
+    const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+    const blackboardDir = path.join(projectRoot, "blackboard");
+    const statePath = loadPath ? path.resolve(loadPath) : path.join(blackboardDir, "state.json");
+
+    try {
+      const data = await fs.readFile(statePath, "utf-8");
+      const state = JSON.parse(data) as PipelineState;
+      console.log(`[Load] 从 ${statePath} 恢复状态 (phase=${state.phase}, iter=${state.budget.currentIteration})`);
+      return state;
+    } catch (err: any) {
+      if (err.code === "ENOENT") {
+        // 自动创建 blackboard 与 tasks 目录
+        await fs.mkdir(blackboardDir, { recursive: true });
+        await fs.mkdir(path.join(blackboardDir, "tasks"), { recursive: true });
+        console.log(`[Load] 状态文件不存在，已创建目录并返回初始状态`);
+        return OrchestratorStateMachine.createInitialState();
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * 创建初始 PipelineState
+   */
+  private static createInitialState(): PipelineState {
     return {
       phase: "INIT",
       tasks: {},
@@ -537,7 +607,7 @@ export class HarnessPolicyEngine {
       (evidenceType) =>
         !evidenceRegistry[evidenceType] ||
         evidenceRegistry[evidenceType].length === 0
-    );
+    ) ?? [];
 
     return { sufficient: missing.length === 0, missing };
   }
@@ -743,4 +813,4 @@ export class GateComplianceChecker {
 // 默认导出
 // =============================================================================
 
-export default OrchestratorStateMachine;
+export default OrchestratorStateMachine

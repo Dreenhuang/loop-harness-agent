@@ -1,72 +1,35 @@
 /**
- * =============================================================================
- * Loop Agent · Orchestrator CLI 入口
- * 独立运行入口：`bun run loop-agent-engine/cli.ts`
- * =============================================================================
+ * Loop Agent Orchestrator CLI 入口
+ * bun run loop-agent-engine/cli.ts
  */
 
 import { OrchestratorStateMachine, type PipelineState, type TaskState } from "./orchestrator";
 
-/**
- * 演示：初始化一个完整的 10 相位流水线
- */
-async function demo() {
-  console.log("═══════════════════════════════════════════════════════");
-  console.log("  Loop Agent · Orchestrator 状态机 · 演示");
-  console.log("  Trae Solo 工程实现 v1.0 对齐版");
-  console.log("═══════════════════════════════════════════════════════\n");
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-  // 1. 初始化 PipelineState
-  const state: PipelineState = {
-    projectName: "demo-project",
-    phase: "INIT",
-    tasks: {},
-    dependencies: {},
-    budget: {
-      maxCost: 100.0,
-      currentCost: 0.0,
-      maxIterations: 200,
-      currentIteration: 0,
-      maxAttemptsPerTask: 3,
-      noProgressThreshold: 3,
-      noProgressCount: 0,
-    },
-    qualityGates: {
-      codeReview: "NOT_STARTED",
-      performance: "NOT_STARTED",
-      testing: "NOT_STARTED",
-      final: "NOT_STARTED",
-    },
-    startedAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    prdPath: "./blackboard/input/prd.md",
-  };
-
-  // 2. 加载示例任务（演示 10 相位）
+function initDemoTasks(state: PipelineState) {
   const phases = [
     "INIT", "REQUIREMENTS", "DESIGN", "ARCHITECTURE", "DEVELOPMENT",
     "QUALITY_GATES", "KNOWLEDGE", "DOCUMENTATION", "FINAL_REVIEW", "DEPLOY"
   ];
-
   const agentMap: Record<string, string> = {
-    "INIT": "orchestrator",
-    "REQUIREMENTS": "product_manager,requirements",
-    "DESIGN": "ux_researcher,ui_designer",
-    "ARCHITECTURE": "architect",
-    "DEVELOPMENT": "backend,frontend",
-    "QUALITY_GATES": "code_reviewer,professional_performance,tester",
-    "KNOWLEDGE": "knowledge_curator",
-    "DOCUMENTATION": "documenter",
-    "FINAL_REVIEW": "final_reviewer",
-    "DEPLOY": "devops",
+    INIT: "orchestrator",
+    REQUIREMENTS: "product_manager,requirements",
+    DESIGN: "ux_researcher,ui_designer",
+    ARCHITECTURE: "architect",
+    DEVELOPMENT: "backend,frontend",
+    QUALITY_GATES: "code_reviewer,professional_performance,tester",
+    KNOWLEDGE: "knowledge_curator",
+    DOCUMENTATION: "documenter",
+    FINAL_REVIEW: "final_reviewer",
+    DEPLOY: "devops",
   };
-
   for (let i = 0; i < phases.length; i++) {
     const phase = phases[i];
-    const agents = agentMap[phase].split(",");
-    for (const agent of agents) {
+    for (const agent of agentMap[phase].split(",")) {
       const taskId = `${phase.toLowerCase()}-${agent}-${i}`;
-      const task: TaskState = {
+      const prevFirstAgent = i > 0 ? agentMap[phases[i - 1]].split(",")[0].trim() : "";
+      state.tasks[taskId] = {
         id: taskId,
         phase: phase as any,
         agentType: agent.trim(),
@@ -76,46 +39,53 @@ async function demo() {
         acceptanceCriteria: { phase_complete: true },
         attempts: 0,
         maxAttempts: 3,
-        dependencies: i > 0 ? [phases[i - 1].toLowerCase()] : [],
+        dependencies: i > 0 ? [`${phases[i - 1].toLowerCase()}-${prevFirstAgent}-${i - 1}`] : [],
         worktree: ["backend", "frontend", "bug_defect_repairer"].includes(agent.trim()),
       };
-      state.tasks[taskId] = task;
     }
   }
+}
 
-  console.log(`[Init] 已加载 ${Object.keys(state.tasks).length} 个任务，覆盖 ${phases.length} 个相位\n`);
+function printSummary(state: PipelineState) {
+  const tasks = Object.values(state.tasks);
+  console.log("\n=== 演示完成 ===");
+  console.log(`Phase: ${state.phase} | Iteration: ${state.budget.currentIteration}`);
+  console.log(`总任务: ${tasks.length} | 完成: ${tasks.filter(t => t.status === "DONE").length} | 运行中: ${tasks.filter(t => t.status === "RUNNING").length} | 待执行: ${tasks.filter(t => t.status === "PENDING").length} | 失败: ${tasks.filter(t => t.status === "FAILED").length}`);
+  console.log("检查 blackboard/state.json 与 blackboard/tasks/*.json");
+}
 
-  // 3. 创建状态机
-  const sm = new OrchestratorStateMachine(state);
+async function demo() {
+  console.log("=== Loop Agent Orchestrator 真实持久化演示 ===\n");
 
-  // 4. 演示 5 轮 tick
-  for (let i = 0; i < 5; i++) {
-    await sm.tick();
+  let state = await OrchestratorStateMachine.loadState();
+  if (Object.keys(state.tasks).length === 0) {
+    state.projectName = "demo-project";
+    state.prdPath = "./blackboard/input/prd.md";
+    initDemoTasks(state);
+    console.log(`[Init] 已加载 ${Object.keys(state.tasks).length} 个任务`);
+  } else {
+    console.log(`[Resume] 从已有状态继续，${Object.keys(state.tasks).length} 个任务`);
   }
 
-  // 5. 演示任务完成回调
-  console.log("\n[Demo] 模拟完成第 1 个任务：");
-  const firstTaskId = Object.keys(state.tasks)[0];
-  await sm.onTaskComplete(firstTaskId, true);
+  let sm = new OrchestratorStateMachine(state);
 
-  console.log("\n[Demo] 模拟失败第 2 个任务（重试 1 次）：");
-  const secondTaskId = Object.keys(state.tasks)[1];
-  await sm.onTaskComplete(secondTaskId, false, "Mock error: file not found");
+  console.log("\n[阶段一] 运行 3 轮 tick...");
+  for (let i = 0; i < 3; i++) {
+    await sm.tick();
+    await sleep(1500);
+  }
 
-  console.log("\n═══════════════════════════════════════════════════════");
-  console.log("  演示完成");
-  console.log("  当前状态：");
-  console.log(`    Phase: ${state.phase}`);
-  console.log(`    Iteration: ${state.budget.currentIteration}`);
-  console.log(`    任务总数: ${Object.keys(state.tasks).length}`);
-  console.log(`    已完成: ${Object.values(state.tasks).filter(t => t.status === "DONE").length}`);
-  console.log(`    进行中: ${Object.values(state.tasks).filter(t => t.status === "RUNNING").length}`);
-  console.log(`    待执行: ${Object.values(state.tasks).filter(t => t.status === "PENDING").length}`);
-  console.log(`    失败: ${Object.values(state.tasks).filter(t => t.status === "FAILED").length}`);
-  console.log("═══════════════════════════════════════════════════════");
+  console.log("\n[阶段二] 模拟重启，从 state.json 恢复...");
+  state = await OrchestratorStateMachine.loadState();
+  sm = new OrchestratorStateMachine(state);
+
+  console.log("\n[阶段三] 恢复后继续运行 2 轮 tick...");
+  for (let i = 0; i < 2; i++) {
+    await sm.tick();
+    await sleep(1500);
+  }
+
+  printSummary(state);
 }
 
-// CLI 入口
-if (import.meta.main) {
-  demo().catch(console.error);
-}
+demo().catch(console.error); // write-truncation-padding-

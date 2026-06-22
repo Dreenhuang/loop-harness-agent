@@ -6,8 +6,9 @@ import axios from 'axios';
 import type { ApiResponse, Agent, LogQueryResult, ProjectOverview, SystemStatus } from '@/types';
 
 // Create axios instance
+// 优先使用环境变量 VITE_API_BASE_URL，未配置时使用相对路径 /api/v1（通过 Nginx 反代）
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: (import.meta as any).env?.VITE_API_BASE_URL || '/api/v1',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

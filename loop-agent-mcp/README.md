@@ -1,10 +1,10 @@
 # Loop-Harness-Agent MCP Server
 
-> **Loop Agent 模式的 MCP Server 实现 · 融合 Boss-auto-harness · v1.2 (智能执行器)**
+> **Loop Agent 模式的 MCP Server 实现 · 融合 Boss-auto-harness · v1.3.1 (Dashboard 信息工具)**
 
-将 Loop-Harness-Agent 的 16 角色 / 10 Phase / 4 Gate / 黑板 / 融合验收 暴露为 **15 个 MCP 工具**，跨 Trae IDE、Claude Code、Cursor 等任何 MCP 客户端可用。
+将 Loop-Harness-Agent 的 16 角色 / 10 Phase / 4 Gate / 黑板 / 融合验收 暴露为 **18 个 MCP 工具**，跨 Trae IDE、Claude Code、Cursor 等任何 MCP 客户端可用。
 
-> **v1.2 核心升级**：从"元调度器"升级为"**智能执行器**"，`spawn_agent` 现在会**实际执行开发任务**（生成代码、创建文件），而非仅返回提示信息。全面测试 **28/28 通过（100%）**。
+> **v1.3.1 新增**：`get_dashboard_info` 工具，获取 MCP Monitor Dashboard 访问信息。
 
 ---
 
@@ -20,9 +20,9 @@
 
 ---
 
-## 二、15 个对外工具（v1.2 新增 3 个）
+## 二、18 个对外工具（v1.3.1 新增 1 个）
 
-### 2.1 核心编排工具（12 个）
+### 2.1 核心编排工具（14 个）
 
 | # | 工具 | 职责 | 响应模式 |
 |---|------|------|----------|
@@ -38,14 +38,22 @@
 | 10 | `check_veto_items` | 6 项一票否决专项检查 | 元数据返回 |
 | 11 | `check_fusion_targets` | 5 大融合目标达成度评估 | 元数据返回 |
 | 12 | `get_token_budget_status` | Token 预算与效率状态 | 元数据返回 |
+| 13 | `cancel_task` | 取消已提交但未完成的任务 | ok |
+| 14 | `get_task_status` | 查询指定任务的当前状态与结果 | ok |
 
 ### 2.2 文件操作工具（v1.2 新增 3 个）⭐
 
 | # | 工具 | 职责 | 响应模式 |
 |---|------|------|----------|
-| 13 | `write_file` | 写入文件到项目目录（支持任意路径）| ok + file_written |
-| 14 | `read_file` | 读取项目中的文件内容 | ok + file_read |
-| 15 | `list_files` | 列出目录下的所有文件 | ok + files_listed |
+| 15 | `write_file` | 写入文件到项目目录（支持任意路径）| ok + file_written |
+| 16 | `read_file` | 读取项目中的文件内容 | ok + file_read |
+| 17 | `list_files` | 列出目录下的所有文件 | ok + files_listed |
+
+### 2.3 Dashboard 信息工具（v1.3.1 新增 1 个）
+
+| # | 工具 | 职责 | 响应模式 |
+|---|------|------|----------|
+| 18 | `get_dashboard_info` | 获取 MCP Monitor Dashboard 访问信息（URL、API、WebSocket、MCP endpoint）| ok |
 
 ---
 

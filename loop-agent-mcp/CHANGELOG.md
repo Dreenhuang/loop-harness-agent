@@ -5,6 +5,15 @@ All notable changes to Loop-Harness-Agent MCP are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-06-22
+
+### Added
+- 新增 `get_dashboard_info` MCP 工具，返回 Dashboard 访问信息（URL、API、WebSocket、MCP endpoint）
+- 支持通过环境变量 `DASHBOARD_URL` 配置默认地址（默认值：https://loopmcp.renrenup.cn）
+- 工具总数从 17 个扩展到 18 个
+
+---
+
 ## [1.3.0] - 2026-06-19
 
 ### 🔒 安全加固 (Phase 1)

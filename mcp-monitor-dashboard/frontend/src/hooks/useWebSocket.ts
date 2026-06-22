@@ -6,7 +6,29 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import type { WSMessage, WSSubscribeRequest } from '@/types';
 
-const WS_URL = (import.meta as any).env?.VITE_WS_URL || `ws://${window.location.host}/ws`;
+// WebSocket URL 配置：优先环境变量，其次 wss 协议，最后开发环境回退
+const getWsUrl = (): string => {
+  const envUrl = (import.meta as any).env?.VITE_WS_URL;
+  
+  if (envUrl) {
+    return envUrl;
+  }
+  
+  // 未配置环境变量时输出警告
+  console.warn(
+    '⚠️ VITE_WS_URL 未配置，使用默认回退逻辑。生产环境必须配置 VITE_WS_URL 环境变量。'
+  );
+  
+  // 生产环境使用 wss 协议
+  if (window.location.protocol === 'https:') {
+    return `wss://${window.location.host}/ws`;
+  }
+  
+  // 开发环境回退到 localhost
+  return 'ws://localhost:8000/ws';
+};
+
+const WS_URL = getWsUrl();
 
 const MAX_RECONNECT_ATTEMPTS = 10;
 

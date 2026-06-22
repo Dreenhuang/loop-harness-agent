@@ -272,6 +272,10 @@ async def _async_dispatch_internal(name: str, arguments: dict[str, Any]) -> dict
             "message": f"列出 {len(files)} 个文件",
         }
 
+    # 新增：Dashboard 信息工具（v1.3.1）
+    if name == "get_dashboard_info":
+        return await _handle_get_dashboard_info()
+
     # 未找到工具
     raise ToolNotFoundError(name)
 
@@ -394,6 +398,21 @@ def _preview_result(result: dict[str, Any]) -> dict[str, Any]:
         "files_count": len(result.get("files_created", [])),
     }
     return preview
+
+
+async def _handle_get_dashboard_info() -> dict[str, Any]:
+    """获取 Dashboard 访问信息（v1.3.1）。"""
+    import os
+    dashboard_url = os.environ.get("DASHBOARD_URL", "https://loopmcp.renrenup.cn")
+    return {
+        "status": "ok",
+        "dashboard_url": dashboard_url,
+        "api_url": f"{dashboard_url}/api",
+        "ws_url": dashboard_url.replace("https://", "wss://").replace("http://", "ws://") + "/ws",
+        "mcp_endpoint": f"{dashboard_url}/mcp",
+        "version": "1.0.0",
+        "description": "MCP Monitor Dashboard - 实时监控 Loop-Harness-Agent 运行状态"
+    }
 
 
 def _maybe_workspace(arguments: dict[str, Any]):

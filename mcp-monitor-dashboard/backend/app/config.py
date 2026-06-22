@@ -14,11 +14,15 @@ class Settings(BaseSettings):
     app_name: str = "MCP Monitor Dashboard"
     app_env: str = "development"  # development/staging/production
     app_debug: bool = True
+    app_host: str = "127.0.0.1"
     app_port: int = 8000
 
     # MCP Server
     mcp_server_cwd: str = ""
     mcp_server_cmd: str = "python -m loop_agent_mcp.server"
+    mcp_workspace: str = "/tmp/loopmcp-workspace"
+    mcp_bridge_url: str = "http://127.0.0.1:8765"
+    dashboard_url: str = "http://localhost:3000"
 
     # Database
     database_url: str = "sqlite:///./data/mcp_monitor.db"
@@ -34,9 +38,14 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_file: str = "./logs/app.log"
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    # Security
+    api_key: str = "dev-api-key-change-in-production"
+
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "extra": "ignore",  # 允许额外字段，不报错
+    }
 
 
 @lru_cache()

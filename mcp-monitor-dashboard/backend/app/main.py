@@ -3,14 +3,17 @@ MCP Monitor Dashboard - FastAPI Application Entry Point
 Version: 1.0.0
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import logging
+import traceback
 
 from app.config import settings
 from app.core.database import init_db
 from app.core.scheduler import start_scheduler, stop_scheduler
+from app.core.auth import APIKeyMiddleware
 from app.api.router import api_router
 from app.websocket.manager import websocket_router, manager
 from app.services.data_collector import collector_service
@@ -48,31 +51,54 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS middleware - environment-aware configuration
-_cors_origins = [
-    "http://localhost:5173",   # Vite dev server
-    "http://localhost:3000",   # Alternative frontend port
+# CORS middleware - restricted origins from environment variable
+# Default: development origins only; production must set CORS_ORIGINS env var
+import os
+_default_dev_origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:3000",
 ]
-# Add production origins from env if configured
-import os
-if _prod_origins := os.getenv("CORS_ORIGINS"):
-    _cors_origins.extend([o.strip() for o in _prod_origins.split(",")])
-
-# In development, allow all; in production, restrict strictly
-if settings.app_env == "production":
-    _allowed_origins = _cors_origins
+_cors_origins_str = os.getenv("CORS_ORIGINS", "")
+if _cors_origins_str:
+    _allowed_origins = [o.strip() for o in _cors_origins_str.split(",") if o.strip()]
 else:
-    _allowed_origins = ["*"]  # Dev only
+    # No CORS_ORIGINS env var set: default to dev origins only (never wildcard)
+    _allowed_origins = _default_dev_origins
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
+    allow_headers=["Authorization", "Content-Type", "X-API-Key"],
 )
+
+# API Key authentication middleware
+app.add_middleware(APIKeyMiddleware)
+
+
+# G-9 修复：全局异常处理中间件，防止内部异常信息泄露给客户端
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """全局异常处理器 - 捕获所有未处理的异常。
+    
+    - 500 错误只返回通用错误消息
+    - 详细异常写入服务端日志（包含 traceback）
+    """
+    # 记录详细异常信息到服务端日志
+    error_detail = f"Unhandled exception: {type(exc).__name__}: {str(exc)}"
+    logger.error(error_detail)
+    logger.error(f"Request: {request.method} {request.url}")
+    logger.error(f"Traceback:\n{traceback.format_exc()}")
+    
+    # 返回通用错误消息给客户端（不暴露内部细节）
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
+
 
 # Include routers
 app.include_router(api_router, prefix="/api/v1")

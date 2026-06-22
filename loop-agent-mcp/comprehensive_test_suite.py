@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Loop-Harness-Agent MCP v1.2 全面测试套件
+Loop-Harness-Agent MCP v1.3.1 全面测试套件
 =====================================
 
 测试范围：
-1. 核心功能模块完整性（15个工具）
+1. 核心功能模块完整性（18个工具）
 2. 边界条件和异常处理
 3. 系统稳定性和压力测试
 4. 响应时间和性能基准
 5. 资源占用评估
 
 作者: Loop-Harness-Agent 测试团队
-日期: 2026-06-19
-版本: v1.0
+日期: 2026-06-22
+版本: v1.1
 """
 
 import sys
@@ -475,6 +475,17 @@ class MCPTestSuite:
             expected_keys=["action", "count", "files"],
         ))
 
+        # 1.17 get_dashboard_info (v1.3.1 新增)
+        cases.append(TestCase(
+            id="CORE-017",
+            name="get_dashboard_info - Dashboard 信息",
+            category="核心功能",
+            tool_name="get_dashboard_info",
+            arguments={},
+            expected_status="ok",
+            expected_keys=["dashboard_url", "api_url", "ws_url", "mcp_endpoint", "version"],
+        ))
+
         # ========== 2. 边界条件测试 ==========
 
         # 2.1 空参数
@@ -875,6 +886,7 @@ class MCPTestSuite:
                 ("spawn_agent", {"agent_name": "backend", "task_input": {"task_type": "api", "endpoint": "perf_test"}}, "后端Agent"),
                 ("write_file", {"path": "perf-test.txt", "content": "performance test"}, "文件写入"),
                 ("read_file", {"path": "perf-test.txt"}, "文件读取"),
+                ("get_dashboard_info", {}, "Dashboard 信息"),
             ]
 
             for tool_name, args, desc in perf_tools:

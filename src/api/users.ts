@@ -1,5 +1,5 @@
 /**
- * 用户列表接口
+ * 用户列表 API
  * Method: GET
  * Endpoint: /api/users
  */
