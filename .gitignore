@@ -28,6 +28,8 @@ credentials/
 .workbuddy/
 loop-agent-mcp/blackboard/
 blackboard/state.json
+blackboard/tasks/**
+blackboard/autoloop/**
 工作树/
 .worktrees/
 *.bak.md
@@ -41,6 +43,14 @@ blackboard/state.json
 *.py-test.txt
 *.py314-info.txt
 *.write-test.txt
+.tmp-loop-test/
+
+# MCP / Dashboard 调试与构建产物
+mcp-monitor-dashboard/frontend/build_output.txt
+mcp-monitor-dashboard/frontend/console_logs*.json
+mcp-monitor-dashboard/frontend/capture_console*.mjs
+mcp-monitor-dashboard/frontend/capture_console*.txt
+mcp-monitor-dashboard/frontend/verify-screenshots/
 
 # === 3. Python 构建产物 ===
 __pycache__/
