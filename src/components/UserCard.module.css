@@ -1,0 +1,15 @@
+/**
+ * UserCard 组件样式
+ * 自动生成于 2026-06-20 09:33:53
+ */
+
+.container {
+  padding: 16px;
+  border-radius: 8px;
+  background-color: #ffffff;
+}
+
+h2 {
+  margin: 0 0 16px 0;
+  color: #333;
+}
