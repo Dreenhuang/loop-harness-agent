@@ -282,6 +282,10 @@ export class OrchestratorStateMachine {
    * 2. 通过 child_process.spawn 启动 loop-agent-engine/agent-worker.ts 子进程
    * 3. 子进程模拟执行（sleep 1s）后写回任务文件
    * 4. 主进程监听 exit 事件，调用 onTaskComplete 更新 PipelineState
+   * 5. worker 子进程以 detached=true 启动，并通过 unref() 释放父进程引用，
+   *    确保 Orchestrator 主进程不会被 worktree 隔离子进程阻塞退出
+   * 6. 默认通过环境变量 LOOP_AGENT_WORKTREE_DRY_RUN=1 强制 worker 进入 dry-run 模式，
+   *    Phase D 之前不创建真实 git worktree（仅打印计划动作）
    */
   private async spawnAgents(tasks: TaskState[]): Promise<void> {
     const batch = tasks.slice(0, this.MAX_PARALLEL_TASKS);
@@ -311,7 +315,7 @@ export class OrchestratorStateMachine {
         acceptanceCriteria: task.acceptanceCriteria,
       };
 
-      console.log(`  → [${task.agentType}] Task ${task.id} (attempts=${task.attempts})`);
+      console.log(`  → [${task.agentType}] Task ${task.id} (attempts=${task.attempts}, worktree=${task.worktree})`);
       console.log(`     Input: ${task.inputPaths.join(", ")}`);
       console.log(`     Output: ${task.outputPath}`);
 
@@ -323,15 +327,23 @@ export class OrchestratorStateMachine {
         phase: task.phase,
         status: "RUNNING",
         startedAt: task.startedAt,
+        worktree: task.worktree,
       };
       await fs.writeFile(taskFile, JSON.stringify(taskPayload, null, 2));
 
       // 启动 worker 子进程（Bun 运行时）
       // 使用 process.execPath 确保使用与当前进程相同的 Bun 可执行文件，避免依赖 PATH
+      // detached=true 让 worker 子进程拥有独立的进程组，unref() 让父进程不被 worker 阻塞
       const worker = spawn(process.execPath, [this.WORKER_SCRIPT, task.id], {
         stdio: "inherit",
-        detached: false,
+        detached: true,
+        env: {
+          ...process.env,
+          LOOP_AGENT_WORKTREE_DRY_RUN:
+            process.env.LOOP_AGENT_WORKTREE_DRY_RUN ?? "1",
+        },
       });
+      worker.unref?.();
 
       worker.on("error", (err) => {
         console.error(`[Spawn] Worker for task ${task.id} failed to start:`, err.message);

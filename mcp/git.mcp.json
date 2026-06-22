@@ -81,7 +81,7 @@
     "isolation_mode": "per_agent",
     "auto_create_on_spawn": true,
     "auto_cleanup_on_done": true,
-    "max_concurrent_worktrees": 16,
+    "max_concurrent_worktrees": 7,
     "naming_pattern": "wt-{agent_type}-{task_id}"
   },
 
