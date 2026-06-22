@@ -25,10 +25,34 @@
  */
 
 import { promises as fs } from "fs";
+import { existsSync } from "fs";
 import { spawn } from "child_process";
 import path from "path";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * 查找 git 可执行文件完整路径
+ * - Windows: 优先检查常见安装位置，再回退到 PATH
+ * - Linux/macOS: 直接使用 git
+ * 解决 Bun 子进程找不到 git（PowerShell 进程能找到但 Bun 拿到的 PATH 不一样）
+ */
+function findGitExe(): string {
+  if (process.platform === "win32") {
+    const candidates = [
+      "C:\\Program Files\\Git\\bin\\git.exe",
+      "C:\\Program Files (x86)\\Git\\bin\\git.exe",
+      "C:\\Program Files\\Git\\cmd\\git.exe",
+      "C:\\Windows\\System32\\git.exe",
+    ];
+    for (const c of candidates) {
+      if (existsSync(c)) return c;
+    }
+  }
+  return "git"; // 回退到 PATH
+}
+
+const GIT_EXE = findGitExe();
 
 /**
  * 判断是否启用 dry-run 模式
@@ -71,7 +95,7 @@ async function createWorktree(
 
   return new Promise<void>((resolve, reject) => {
     const proc = spawn(
-      "git",
+      GIT_EXE,
       ["worktree", "add", "-b", wtBranch, wtAbsPath, "HEAD"],
       { cwd: projectRoot, stdio: "pipe" }
     );
@@ -93,26 +117,58 @@ async function createWorktree(
 
 /**
  * 真实模式：强制清理 worktree
+ * 策略（解决 Windows Git `worktree remove` 行为异常）：
+ *   1) 物理删除 .worktrees/<wtBranch> 目录
+ *   2) `git worktree prune` 清理 .git/worktrees 引用
+ *   3) `git branch -D <wtBranch>` 强制删除分支（如果还存在）
  * 即便失败也要继续（finally 块），但必须记录错误
  */
-async function removeWorktree(
+function removeWorktree(
   wtAbsPath: string,
+  wtBranch: string,
   projectRoot: string
-): Promise<void> {
+): void {
+  const { execFileSync } = require("child_process");
+  const errors: string[] = [];
+
+  // 1) 物理删除 .worktrees/ 目录
   try {
-    await new Promise<void>((resolve) => {
-      const proc = spawn(
-        "git",
-        ["worktree", "remove", "--force", wtAbsPath],
-        { cwd: projectRoot, stdio: "pipe" }
-      );
-      proc.on("error", () => resolve()); // git 不存在时静默
-      proc.on("exit", () => resolve());
-    });
-    console.log(`[Worker] worktree removed: ${wtAbsPath}`);
+    if (existsSync(wtAbsPath)) {
+      // 同步递归删除
+      const { rmSync } = require("fs");
+      rmSync(wtAbsPath, { recursive: true, force: true });
+    }
   } catch (err: any) {
+    errors.push(`rm: ${err.message}`);
+  }
+
+  // 2) git worktree prune
+  try {
+    execFileSync(GIT_EXE, ["worktree", "prune"], {
+      cwd: projectRoot,
+      stdio: "pipe",
+      timeout: 5000,
+    });
+  } catch (err: any) {
+    errors.push(`prune: ${err.message}`);
+  }
+
+  // 3) 删除分支（已 checkout 被移除的分支后才能删）
+  try {
+    execFileSync(GIT_EXE, ["branch", "-D", wtBranch], {
+      cwd: projectRoot,
+      stdio: "pipe",
+      timeout: 5000,
+    });
+  } catch (err: any) {
+    // 分支可能已经被 prune 一并清理，忽略
+  }
+
+  if (errors.length === 0) {
+    console.log(`[Worker] worktree removed: ${wtAbsPath} (branch=${wtBranch})`);
+  } else {
     console.error(
-      `[Worker][LOUD FAILURE] worktree cleanup failed for ${wtAbsPath}: ${err.message}`
+      `[Worker][LOUD FAILURE] worktree cleanup partial: ${errors.join('; ')}`
     );
   }
 }
@@ -196,7 +252,8 @@ async function main() {
 
     await fs.writeFile(taskFile, JSON.stringify(task, null, 2), "utf-8");
     console.log(`[Worker] 任务 ${taskId} 完成 ✓`);
-    process.exit(0);
+    // 不再 process.exit(0) — 让 main() 自然返回，确保 finally 块中的 await cleanup 有时间完成
+    return;
   } catch (err: any) {
     console.error(`[Worker] 任务 ${taskId} 执行失败:`, err.message);
 
@@ -212,11 +269,13 @@ async function main() {
       // 忽略写回失败时的二次异常
     }
 
-    process.exit(1);
+    // 不再 process.exit(1) — 让 main() 自然返回，让 finally 块清理 worktree
+    return;
   } finally {
     // 清理 worktree（仅在真实模式且成功创建后才执行）
+    // 使用同步调用，确保父进程退出前 cleanup 完成
     if (worktreeActive && !useDryRun) {
-      await removeWorktree(wtAbsPath, projectRoot);
+      removeWorktree(wtAbsPath, wtBranch, projectRoot);
     }
   }
 }

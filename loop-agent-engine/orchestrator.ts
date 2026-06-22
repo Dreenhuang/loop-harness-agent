@@ -339,8 +339,10 @@ export class OrchestratorStateMachine {
         detached: true,
         env: {
           ...process.env,
+          // v1.2.1：默认真实模式（Phase B 7/7 PASS 后启用）
+          // 设置 LOOP_AGENT_WORKTREE_DRY_RUN=1 可强制回退到 dry-run
           LOOP_AGENT_WORKTREE_DRY_RUN:
-            process.env.LOOP_AGENT_WORKTREE_DRY_RUN ?? "1",
+            process.env.LOOP_AGENT_WORKTREE_DRY_RUN,
         },
       });
       worker.unref?.();
