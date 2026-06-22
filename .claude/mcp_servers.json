@@ -1,5 +1,17 @@
 {
   "mcpServers": {
+    "mcp_loop-harness-agent": {
+      "command": "python",
+      "args": [
+        "-m",
+        "loop_agent_mcp.server"
+      ],
+      "cwd": "G:\\ai-gongju\\Loop-agent\\loop-agent-mcp",
+      "env": {
+        "PYTHONIOENCODING": "utf-8"
+      },
+      "description": "Loop-Harness-Agent MCP Server (Python stdio) - 12 tools"
+    },
     "loop-agent": {
       "command": "node",
       "args": [

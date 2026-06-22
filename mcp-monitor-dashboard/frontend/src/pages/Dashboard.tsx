@@ -15,8 +15,7 @@ import {
   Input,
   Select,
   Badge,
-  Tooltip,
-  message,
+  Spin,
 } from 'antd';
 import {
   PlayCircleOutlined,
@@ -33,15 +32,15 @@ import {
 
 import AgentCard from '@/components/ui/AgentCard';
 import LogEntryComponent from '@/components/ui/LogEntry';
+import { FeedbackSettings } from '@/components/feedback';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useAgentStore } from '@/store/agentStore';
 import { useLogStore } from '@/store/logStore';
 import { useProjectStore } from '@/store/projectStore';
+import { useNotification } from '@/hooks/useNotification';
 import type { WSMessage, Agent, LogEntry, ProjectOverview, SystemStatus } from '@/types';
-import agentService from '@/services/agentService';
-import logService from '@/services/logService';
-import projectService from '@/services/projectService';
-import systemService from '@/services/systemService';
+import services from '@/services';
+const { agentService, logService, projectService, systemService } = services;
 import './Dashboard.css';
 
 const Dashboard: React.FC = () => {
@@ -51,27 +50,86 @@ const Dashboard: React.FC = () => {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [logLevelFilter, setLogLevelFilter] = useState<string[]>([]);
   const [lastUpdateTime, setLastUpdateTime] = useState<string>('-');
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [settingsVisible, setSettingsVisible] = useState(false);
+  const [isRealtimePaused, setIsRealtimePaused] = useState(false);
+  const isRealtimePausedRef = useRef(isRealtimePaused);
+  useEffect(() => {
+    isRealtimePausedRef.current = isRealtimePaused;
+  }, [isRealtimePaused]);
 
   // Stores
   const { agents, setAgents, updateAgent } = useAgentStore();
   const { logs, setLogs, prependLog } = useLogStore();
   const { overview, setOverview } = useProjectStore();
 
+  // Notification system
+  const { notify, success, warning, error, info, dedup, withLoading } = useNotification();
+
   // Refs for auto-scroll
   const logContainerRef = useRef<HTMLDivElement>(null);
   const isAutoScrollRef = useRef(true);
 
+  // Refs for toast deduplication
+  const hasShownDisconnectRef = useRef(false);
+  const hasShownConnectRef = useRef(false);
+
+  // Track token threshold warning state
+  const tokenWarningSentRef = useRef(false);
+
   // WebSocket connection
-  const { isConnected, subscribe } = useWebSocket({
+  const { isConnected, subscribe, requestFullSync } = useWebSocket({
     onMessage: handleWSMessage,
     onOpen: () => {
-      message.success('实时连接已建立');
+      if (!hasShownConnectRef.current) {
+        success('实时连接已建立');
+        hasShownConnectRef.current = true;
+        hasShownDisconnectRef.current = false;
+      }
       subscribe(['agent_status', 'logs', 'overview']);
     },
     onClose: () => {
-      message.warning('连接已断开，正在重连...');
+      if (!hasShownDisconnectRef.current) {
+        warning('连接已断开，正在重连...');
+        hasShownDisconnectRef.current = true;
+        hasShownConnectRef.current = false;
+      }
+    },
+    onError: () => {
+      dedup('ws-error', 'error', '实时连接发生错误，正在尝试恢复', 10000);
     },
   });
+
+  // Subscribe to global feedback events from services / websocket
+  useEffect(() => {
+    const handleFeedback = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail) return;
+
+      switch (detail.type) {
+        // ws-connected 已在 useWebSocket onOpen 中通过 Dashboard 本地状态提示，避免重复
+        case 'ws-disconnected':
+          warning(detail.message);
+          break;
+        case 'ws-error':
+          error(detail.message);
+          break;
+        case 'api-error':
+          error(detail.message);
+          break;
+        default:
+          info(detail.message);
+      }
+    };
+
+    window.addEventListener('mcp-feedback', handleFeedback);
+    window.addEventListener('mcp-api-error', handleFeedback);
+
+    return () => {
+      window.removeEventListener('mcp-feedback', handleFeedback);
+      window.removeEventListener('mcp-api-error', handleFeedback);
+    };
+  }, [success, warning, error, info]);
 
   // Handle incoming WebSocket messages with data validation
   function handleWSMessage(msg: WSMessage) {
@@ -81,23 +139,30 @@ const Dashboard: React.FC = () => {
       return;
     }
 
+    // Respect realtime pause state
+    if (isRealtimePausedRef.current && ['agent_status_update', 'project_overview_update', 'log_entry'].includes(msg.type)) {
+      return;
+    }
+
     switch (msg.type) {
-      case 'init':
+      case 'init': {
         // Initial data load
-        if (Array.isArray(msg.data?.agents)) {
-          const validAgents = msg.data.agents.filter(
+        const initData = msg.data as any;
+        if (initData && Array.isArray(initData.agents)) {
+          const validAgents = initData.agents.filter(
             (a: unknown) => a && typeof a === 'object' && 'id' in a && 'status' in a
           );
           setAgents(validAgents as Agent[]);
         }
-        if (msg.data?.overview && typeof msg.data.overview === 'object') {
-          setOverview(msg.data.overview as ProjectOverview);
+        if (initData?.overview && typeof initData.overview === 'object') {
+          setOverview(initData.overview as ProjectOverview);
         }
         break;
+      }
 
       case 'agent_status_update':
         if (Array.isArray(msg.data)) {
-          msg.data.forEach((agent: Agent) => {
+          (msg.data as Agent[]).forEach((agent: Agent) => {
             if (agent?.id && agent?.status) {
               updateAgent(agent.id, agent);
             }
@@ -107,7 +172,7 @@ const Dashboard: React.FC = () => {
 
       case 'project_overview_update':
         if (msg.data && typeof msg.data === 'object' && 'name' in msg.data) {
-          setOverview(msg.data as ProjectOverview);
+          setOverview(msg.data as unknown as ProjectOverview);
         }
         break;
 
@@ -127,7 +192,61 @@ const Dashboard: React.FC = () => {
     }
   }
 
+  // Monitor token threshold and emit warning once per crossing
+  useEffect(() => {
+    const percentage = overview?.token_budget?.percentage ?? 0;
+    if (percentage >= 85) {
+      if (!tokenWarningSentRef.current) {
+        tokenWarningSentRef.current = true;
+        warning(`Token 用量已达 ${percentage.toFixed(1)}%，请关注预算消耗`, {
+          duration: 0,
+        });
+      }
+    } else {
+      tokenWarningSentRef.current = false;
+    }
+  }, [overview?.token_budget?.percentage, warning]);
+
   // Load initial data via REST API
+  async function loadInitialData() {
+    try {
+      await withLoading(
+        Promise.all([
+          agentService.getAll(),
+          logService.getLogs({ page_size: 100 }),
+          projectService.getOverview(),
+        ]).then(([agentsRes, logsRes, projectRes]) => {
+          setAgents(agentsRes.data || []);
+          setLogs(logsRes.data?.items || [], logsRes.data?.total || 0);
+          if (projectRes.data) {
+            setOverview(projectRes.data);
+          }
+        }),
+        {
+          loading: '正在加载仪表盘数据...',
+          success: '仪表盘数据加载完成',
+          error: (err) => `加载数据失败：${(err as Error)?.message || '请稍后重试'}`,
+        }
+      );
+    } catch (error) {
+      console.error('Failed to load initial data:', error);
+    } finally {
+      setIsInitialLoading(false);
+    }
+  }
+
+  async function loadSystemStatus() {
+    try {
+      const res = await systemService.getStatus();
+      if (res.data) {
+        setSystemStatus(res.data);
+      }
+    } catch (error) {
+      console.error('Failed to load system status:', error);
+      // 静默失败，避免轮询时刷屏；首次加载已在 loadInitialData 中提示
+    }
+  }
+
   useEffect(() => {
     loadInitialData();
     loadSystemStatus();
@@ -137,41 +256,16 @@ const Dashboard: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  async function loadInitialData() {
-    try {
-      const [agentsRes, logsRes, projectRes] = await Promise.all([
-        agentService.getAll(),
-        logService.getLogs({ page_size: 100 }),
-        projectService.getOverview(),
-      ]);
-
-      setAgents(agentsRes.data || []);
-      setLogs(logsRes.data?.items || [], logsRes.data?.total || 0);
-      setOverview(projectRes.data || null);
-    } catch (error) {
-      console.error('Failed to load initial data:', error);
-      message.error('加载数据失败');
-    }
-  }
-
-  async function loadSystemStatus() {
-    try {
-      const res = await systemService.getStatus();
-      setSystemStatus(res.data);
-    } catch (error) {
-      console.error('Failed to load system status:', error);
-    }
-  }
-
   // System control handlers
   async function handleStart() {
     setLoadingAction('start');
     try {
-      await systemService.start();
-      message.success('MCP Server 启动成功');
+      await withLoading(systemService.start(), {
+        loading: '正在启动 MCP Server...',
+        success: 'MCP Server 启动成功',
+        error: 'MCP Server 启动失败',
+      });
       await loadSystemStatus();
-    } catch (error) {
-      message.error('启动失败');
     } finally {
       setLoadingAction(null);
     }
@@ -180,11 +274,12 @@ const Dashboard: React.FC = () => {
   async function handleStop() {
     setLoadingAction('stop');
     try {
-      await systemService.stop();
-      message.success('MCP Server 已停止');
+      await withLoading(systemService.stop(), {
+        loading: '正在停止 MCP Server...',
+        success: 'MCP Server 已停止',
+        error: 'MCP Server 停止失败',
+      });
       await loadSystemStatus();
-    } catch (error) {
-      message.error('停止失败');
     } finally {
       setLoadingAction(null);
     }
@@ -193,25 +288,49 @@ const Dashboard: React.FC = () => {
   async function handleRestart() {
     setLoadingAction('restart');
     try {
-      await systemService.restart();
-      message.success('MCP Server 重启成功');
+      await withLoading(systemService.restart(), {
+        loading: '正在重启 MCP Server...',
+        success: 'MCP Server 重启成功',
+        error: 'MCP Server 重启失败',
+      });
       await loadSystemStatus();
-    } catch (error) {
-      message.error('重启失败');
     } finally {
       setLoadingAction(null);
     }
+  }
+
+  // Realtime pause/resume toggle
+  function handleToggleRealtime() {
+    setIsRealtimePaused((prev) => {
+      const next = !prev;
+      if (next) {
+        info('已暂停实时推送，页面将不再自动更新');
+      } else {
+        success('已恢复实时推送');
+        requestFullSync?.();
+      }
+      return next;
+    });
   }
 
   // Log search handler
   async function handleSearch(value: string) {
     setSearchKeyword(value);
     try {
+      info(`正在搜索：${value || '全部日志'}`);
       const res = await logService.getLogs({ keyword: value });
       setLogs(res.data?.items || [], res.data?.total || 0);
-    } catch (error) {
-      console.error('Search failed:', error);
+      success(`找到 ${res.data?.total || 0} 条日志`);
+    } catch (searchError) {
+      console.error('Search failed:', searchError);
+      notify({ type: 'error', message: '日志搜索失败' });
     }
+  }
+
+  // Log level filter handler
+  function handleLevelFilterChange(levels: string[]) {
+    setLogLevelFilter(levels);
+    info(levels.length > 0 ? `已应用 ${levels.length} 个日志级别筛选` : '已清除日志级别筛选');
   }
 
   // Auto-scroll logic
@@ -255,9 +374,9 @@ const Dashboard: React.FC = () => {
 
         <div className="header-right">
           {/* Status Indicator */}
-          <Tooltip title={`MCP Server: ${mcpRunning ? '运行中' : '已停止'}`}>
+          <span title={`MCP Server: ${mcpRunning ? '运行中' : '已停止'}`}>
             <Badge status={mcpRunning ? 'success' : 'default'} />
-          </Tooltip>
+          </span>
 
           {/* Control Buttons */}
           <Space size="small">
@@ -289,14 +408,35 @@ const Dashboard: React.FC = () => {
             >
               重启
             </Button>
+
+            <Button
+              icon={isRealtimePaused ? <PlayCircleOutlined /> : <PauseCircleOutlined />}
+              onClick={handleToggleRealtime}
+              size="small"
+            >
+              {isRealtimePaused ? '恢复' : '暂停'}
+            </Button>
           </Space>
 
-          <SettingOutlined className="settings-icon" style={{ fontSize: 18 }} />
+          <Button
+            type="text"
+            icon={<SettingOutlined />}
+            onClick={() => setSettingsVisible(true)}
+            aria-label="打开提示设置"
+          >
+            设置
+          </Button>
         </div>
       </header>
 
       {/* Main Content - Four Quadrant Layout */}
       <main className="dashboard-main">
+        <Spin
+          spinning={isInitialLoading}
+          tip="正在加载仪表盘数据..."
+          size="large"
+          style={{ width: '100%' }}
+        >
         <Row gutter={[16, 16]}>
           {/* Left Column */}
           <Col xs={24} lg={12}>
@@ -330,6 +470,21 @@ const Dashboard: React.FC = () => {
               size="small"
               extra={
                 <Space size="small">
+                  <Select
+                    mode="multiple"
+                    allowClear
+                    placeholder={<><FilterOutlined /> 级别</>}
+                    size="small"
+                    style={{ minWidth: 120 }}
+                    value={logLevelFilter}
+                    onChange={handleLevelFilterChange}
+                    options={[
+                      { label: 'INFO', value: 'info' },
+                      { label: 'WARN', value: 'warning' },
+                      { label: 'ERROR', value: 'error' },
+                      { label: 'DEBUG', value: 'debug' },
+                    ]}
+                  />
                   <Input
                     placeholder="搜索日志..."
                     prefix={<SearchOutlined />}
@@ -338,6 +493,17 @@ const Dashboard: React.FC = () => {
                     style={{ width: 180 }}
                     onChange={(e) => handleSearch(e.target.value)}
                     value={searchKeyword}
+                  />
+                  <Button
+                    icon={<ClearOutlined />}
+                    size="small"
+                    onClick={() => {
+                      setSearchKeyword('');
+                      setLogLevelFilter([]);
+                      handleSearch('');
+                      info('已清除日志搜索和筛选');
+                    }}
+                    aria-label="清除搜索和筛选"
                   />
                 </Space>
               }
@@ -348,7 +514,7 @@ const Dashboard: React.FC = () => {
                     <LogEntryComponent key={`${log.id}-${log.timestamp}`} log={log} />
                   ))
                 ) : (
-                  <div className="empty-logs">
+                  <div className="empty-logs" role="status" aria-live="polite">
                     <p>📝 暂无操作日志</p>
                     <p className="hint">当 Agent 开始执行任务后，操作日志将在此处实时显示。</p>
                   </div>
@@ -384,8 +550,8 @@ const Dashboard: React.FC = () => {
                 <Col span={12}>
                   <Statistic
                     title="任务完成率"
-                    value={overview?.tasks.completed || 0}
-                    suffix={`/ ${overview?.tasks.total || 0}`}
+                    value={overview?.tasks?.completed || 0}
+                    suffix={`/ ${overview?.tasks?.total || 0}`}
                     prefix="📋"
                     valueStyle={{ color: '#52C41A' }}
                   />
@@ -395,22 +561,22 @@ const Dashboard: React.FC = () => {
                 <Col span={12}>
                   <Statistic
                     title="Token 预算"
-                    value={overview?.token_budget.percentage || 0}
+                    value={overview?.token_budget?.percentage || 0}
                     suffix="%"
                     prefix="💰"
                     valueStyle={{
                       color:
-                        (overview?.token_budget.percentage || 0) > 90
+                        (overview?.token_budget?.percentage || 0) > 90
                           ? '#FF4D4F'
                           : '#FAAD14',
                     }}
                   />
                   <Progress
-                    percent={Math.round(overview?.token_budget.percentage || 0)}
+                    percent={Math.round(overview?.token_budget?.percentage || 0)}
                     size="small"
                     showInfo={false}
                     strokeColor={
-                      (overview?.token_budget.percentage || 0) > 90
+                      (overview?.token_budget?.percentage || 0) > 90
                         ? '#FF4D4F'
                         : undefined
                     }
@@ -421,8 +587,8 @@ const Dashboard: React.FC = () => {
                 <Col span={12}>
                   <Statistic
                     title="活跃 Agent"
-                    value={overview?.agents.active || 0}
-                    suffix={`/ ${overview?.agents.total || 0}`}
+                    value={overview?.agents?.active || 0}
+                    suffix={`/ ${overview?.agents?.total || 0}`}
                     prefix="👥"
                     valueStyle={{ color: '#1677FF' }}
                   />
@@ -442,18 +608,18 @@ const Dashboard: React.FC = () => {
                   <div className="gate-status-row">
                     <span className="gate-label">Gate 门禁状态：</span>
                     <Space>
-                      <Tooltip title="代码审查">
-                        <span>G1: {renderGateBadge(overview?.gates.gate1_code_review || 'pending')}</span>
-                      </Tooltip>
-                      <Tooltip title="性能压测">
-                        <span>G2: {renderGateBadge(overview?.gates.gate2_performance || 'pending')}</span>
-                      </Tooltip>
-                      <Tooltip title="功能测试">
-                        <span>G3: {renderGateBadge(overview?.gates.gate3_testing || 'pending')}</span>
-                      </Tooltip>
-                      <Tooltip title="上线终审">
-                        <span>G4: {renderGateBadge(overview?.gates.gate4_final_review || 'pending')}</span>
-                      </Tooltip>
+                      <span title="代码审查门禁">
+                        G1: {renderGateBadge(overview?.gates?.gate1_code_review || 'pending')}
+                      </span>
+                      <span title="性能压测门禁">
+                        G2: {renderGateBadge(overview?.gates?.gate2_performance || 'pending')}
+                      </span>
+                      <span title="功能测试门禁">
+                        G3: {renderGateBadge(overview?.gates?.gate3_testing || 'pending')}
+                      </span>
+                      <span title="上线终审门禁">
+                        G4: {renderGateBadge(overview?.gates?.gate4_final_review || 'pending')}
+                      </span>
                     </Space>
                   </div>
                 </Col>
@@ -498,6 +664,7 @@ const Dashboard: React.FC = () => {
             </Card>
           </Col>
         </Row>
+        </Spin>
       </main>
 
       {/* Footer */}
@@ -511,8 +678,12 @@ const Dashboard: React.FC = () => {
           )}
         </span>
         <span>Last Update: {lastUpdateTime}</span>
-        <Tag color="blue">Auto-refresh ON</Tag>
+        <Tag color={isRealtimePaused ? 'orange' : 'blue'}>
+          {isRealtimePaused ? '实时推送已暂停' : 'Auto-refresh ON'}
+        </Tag>
       </footer>
+
+      <FeedbackSettings visible={settingsVisible} onClose={() => setSettingsVisible(false)} />
     </div>
   );
 };

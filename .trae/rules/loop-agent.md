@@ -6,6 +6,7 @@
 > **生效日期**：2026-06-17
 > **配套文件**：
 > - 黑板模板：`项目进度记录.md`
+> - 任务拆分与执行规则：`task-delegation-execution.md`（强制：收到指令后立即拆分并启动 Agent 执行）
 > - A2A 速查卡：`A2A消息速查卡.md`
 > - Skill 资产库：`.trae/skills/`
 > - Agent Profile：`.trae/agents/`

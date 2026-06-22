@@ -33,15 +33,17 @@ class Base(DeclarativeBase):
     pass
 
 
+# Initialize SessionLocal at module level to avoid None reference
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker as _sync_sessionmaker
+
+engine = create_engine(DATABASE_URL, echo=settings.app_debug)
+SessionLocal = _sync_sessionmaker(bind=engine, expire_on_commit=False)
+
+
 async def init_db():
     """Initialize database - create tables."""
     global engine, SessionLocal
-
-    from sqlalchemy import create_engine
-    engine = create_engine(DATABASE_URL, echo=settings.app_debug)
-    # Use sync sessionmaker for sync SQLite engine
-    from sqlalchemy.orm import sessionmaker as _sync_sessionmaker
-    SessionLocal = _sync_sessionmaker(bind=engine, expire_on_commit=False)
 
     # Import all models to register them with Base
     from app.models.database_models import Agent, Log, Project  # noqa: F401

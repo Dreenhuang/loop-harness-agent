@@ -46,14 +46,10 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, onClick }) => {
             status={
               agent.status === 'complete'
                 ? 'success'
-                : agent.status === 'error'
-                ? 'exception'
                 : 'active'
             }
             strokeColor={
-              agent.status === 'error'
-                ? '#FF4D4F'
-                : agent.current_task_progress && agent.current_task_progress > 70
+              agent.current_task_progress && agent.current_task_progress > 70
                 ? '#52C41A'
                 : undefined
             }

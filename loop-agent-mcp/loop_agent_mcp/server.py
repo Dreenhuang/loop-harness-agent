@@ -18,6 +18,7 @@
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import sys
 from pathlib import Path
@@ -45,7 +46,7 @@ except ImportError as exc:
 
 from loop_agent_mcp import __version__, __loop_agent_version__, __fusion_standard__
 from loop_agent_mcp.tools.schemas import TOOL_SCHEMAS
-from loop_agent_mcp.tools.dispatcher import dispatch
+from loop_agent_mcp.tools.dispatcher import async_dispatch
 
 SERVER_NAME = "loop-harness-agent"
 
@@ -68,9 +69,11 @@ def build_server():
 
     @app.call_tool()
     async def call_tool(name: str, arguments: dict[str, Any]):
-        result = dispatch(name, arguments or {})
+        # v1.4: 直接 await 异步调度器，避免 asyncio.to_thread 额外开销，
+        # 真正支持多 spawn_agent 并行执行与任务状态查询。
+        result = await async_dispatch(name, arguments or {})
 
-        # 融合 v1.2 升级：根据结果类型智能格式化响应
+        # v1.2/v1.4 升级：根据结果类型智能格式化响应
         mode = result.get("mode", "metadata")
         action = result.get("action", name)
 
@@ -93,12 +96,12 @@ def build_server():
         elif result.get("status") == "error":
             # 错误响应
             error_msg = result.get("error", result.get("message", "未知错误"))
-            text = f"❌ 执行失败: {error_msg}\n\n详情:\n{json.dumps(result, ensure_ascii=False, indent=2)}"
+            text = f"执行失败: {error_msg}\n\n详情:\n{json.dumps(result, ensure_ascii=False, indent=2)}"
             return [TextContent(type="text", text=text, isError=True)]
 
         else:
             # 元操作（状态查询、黑板更新等）：返回简洁提示 + 完整JSON
-            hint_message = result.get("message", f"✅ {name} 完成")
+            hint_message = result.get("message", f"{name} 完成")
             text = f"{hint_message}\n\n{json.dumps(result, ensure_ascii=False, indent=2)}"
             return [TextContent(type="text", text=text)]
 

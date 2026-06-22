@@ -4,6 +4,11 @@
 - spawn_agent 必须执行实际开发操作
 - 返回 files_created / output / execution_status
 - 区分 executed（已执行）和 hint_only（仅提示）
+
+v1.3 安全加固：
+- 所有文件操作经 security.validate_path 校验
+- 所有标识符经 security.sanitize_identifier 清洗
+- 所有内容经 security.validate_content 校验大小
 """
 from __future__ import annotations
 
@@ -13,6 +18,11 @@ from pathlib import Path
 from typing import Any
 
 from loop_agent_mcp.core.config import find_workspace_root
+from loop_agent_mcp.core.security import (
+    sanitize_identifier,
+    validate_content,
+    validate_path,
+)
 from loop_agent_mcp.core.state import StateManager
 
 
@@ -20,34 +30,50 @@ from loop_agent_mcp.core.state import StateManager
 
 
 def _write_file(workspace, relative_path: str, content: str) -> str:
-    """写入文件并返回完整路径。"""
-    # 确保workspace是Path对象
+    """写入文件并返回完整路径（v1.3 安全加固版）。"""
     if isinstance(workspace, str):
         workspace = Path(workspace)
-    full_path = workspace / relative_path
+
+    # v1.3 安全加固：路径验证 + 内容大小校验
+    full_path = validate_path(workspace, relative_path, operation="write")
+    validate_content(content)
+
     full_path.parent.mkdir(parents=True, exist_ok=True)
     full_path.write_text(content, encoding="utf-8")
     return str(full_path)
 
 
 def _read_file(workspace, relative_path: str) -> str:
-    """读取文件内容。"""
+    """读取文件内容（v1.3 安全加固版）。"""
     if isinstance(workspace, str):
         workspace = Path(workspace)
-    full_path = workspace / relative_path
+
+    # v1.3 安全加固：路径验证（含工作区边界）
+    full_path = validate_path(workspace, relative_path, operation="read")
     if not full_path.is_file():
         raise FileNotFoundError(f"文件不存在: {full_path}")
+
     return full_path.read_text(encoding="utf-8")
 
 
 def _list_files(workspace, directory: str = ".") -> list[str]:
-    """列出目录下所有文件。"""
+    """列出目录下所有文件（v1.3 安全加固版）。"""
     if isinstance(workspace, str):
         workspace = Path(workspace)
-    dir_path = workspace / directory
+
+    # v1.3 安全加固：路径验证
+    dir_path = validate_path(workspace, directory, operation="list")
     if not dir_path.is_dir():
         return []
-    return [str(f.relative_to(workspace)) for f in dir_path.rglob("*") if f.is_file()]
+
+    # v1.3 限制返回数量，防止 DoS
+    files: list[str] = []
+    for f in dir_path.rglob("*"):
+        if f.is_file():
+            files.append(str(f.relative_to(workspace)))
+            if len(files) >= 500:
+                break
+    return files
 
 
 # ---- 各角色执行器 ----
@@ -62,7 +88,7 @@ def execute_backend_agent(task_input: dict[str, Any]) -> dict[str, Any]:
 
     if task_type == "api":
         # API 接口开发
-        endpoint = task_input.get("endpoint", "example")
+        endpoint = sanitize_identifier(task_input.get("endpoint", "example"))
         method = task_input.get("method", "GET")
         description = task_input.get("description", "")
 
@@ -85,7 +111,7 @@ def execute_backend_agent(task_input: dict[str, Any]) -> dict[str, Any]:
 
     elif task_type == "database":
         # 数据库模型/迁移
-        model_name = task_input.get("model_name", "Example")
+        model_name = sanitize_identifier(task_input.get("model_name", "Example"))
         fields = task_input.get("fields", [])
 
         model_code = _generate_database_model(model_name, fields)
@@ -98,7 +124,7 @@ def execute_backend_agent(task_input: dict[str, Any]) -> dict[str, Any]:
 
     elif task_type == "service":
         # 业务逻辑层
-        service_name = task_input.get("service_name", "ExampleService")
+        service_name = sanitize_identifier(task_input.get("service_name", "ExampleService"))
         methods = task_input.get("methods", [])
 
         service_code = _generate_service(service_name, methods)
@@ -109,6 +135,9 @@ def execute_backend_agent(task_input: dict[str, Any]) -> dict[str, Any]:
         )
         files_created.append(file_path)
 
+    # Task 4.2: 质量评估 - 集成代码质量打分
+    quality_score = _assess_quality(files_created, task_type)
+
     return {
         "status": "executed",
         "agent": "backend",
@@ -116,6 +145,59 @@ def execute_backend_agent(task_input: dict[str, Any]) -> dict[str, Any]:
         "files_created": files_created,
         "output": f"✅ 后端任务完成：生成 {len(files_created)} 个文件",
         "timestamp": time.time(),
+        "quality_score": quality_score,
+    }
+
+
+def _assess_quality(files_created: list[str], task_type: str) -> dict[str, Any]:
+    """Task 4.2: 对生成的文件进行质量评估。
+
+    Args:
+        files_created: 创建的文件路径列表
+        task_type: 任务类型
+
+    Returns:
+        包含 score/grade/issues 的质量评估字典
+    """
+    score = 100
+    issues: list[str] = []
+
+    # 1. 文件数量检查
+    if not files_created:
+        score -= 50
+        issues.append("未生成任何文件")
+    elif len(files_created) < 2:
+        score -= 20
+        issues.append("生成文件数量偏少，缺少配套类型/测试")
+
+    # 2. 文件存在性检查
+    for fp in files_created:
+        if not Path(fp).exists():
+            score -= 15
+            issues.append(f"文件未实际创建: {fp}")
+
+    # 3. 任务类型专项检查
+    if task_type == "api" and len(files_created) < 2:
+        score -= 10
+        issues.append("API任务应同时生成接口文件和类型定义文件")
+
+    # 4. 等级评定
+    score = max(0, score)
+    if score >= 90:
+        grade = "A"
+    elif score >= 75:
+        grade = "B"
+    elif score >= 60:
+        grade = "C"
+    else:
+        grade = "D"
+
+    return {
+        "score": score,
+        "grade": grade,
+        "issues": issues,
+        "files_evaluated": len(files_created),
+        "task_type": task_type,
     }
 
 
@@ -128,7 +210,7 @@ def execute_frontend_agent(task_input: dict[str, Any]) -> dict[str, Any]:
 
     if task_type == "component":
         # React/Vue 组件
-        component_name = task_input.get("component_name", "ExampleComponent")
+        component_name = sanitize_identifier(task_input.get("component_name", "ExampleComponent"))
         framework = task_input.get("framework", "react")
         props = task_input.get("props", [])
 
@@ -151,7 +233,7 @@ def execute_frontend_agent(task_input: dict[str, Any]) -> dict[str, Any]:
 
     elif task_type == "page":
         # 页面组件
-        page_name = task_input.get("page_name", "ExamplePage")
+        page_name = sanitize_identifier(task_input.get("page_name", "ExamplePage"))
         route = task_input.get("route", "/example")
 
         page_code = _generate_page(page_name, route)
@@ -164,7 +246,7 @@ def execute_frontend_agent(task_input: dict[str, Any]) -> dict[str, Any]:
 
     elif task_type == "hooks":
         # 自定义Hook
-        hook_name = task_input.get("hook_name", "useExample")
+        hook_name = sanitize_identifier(task_input.get("hook_name", "useExample"))
         logic = task_input.get("logic", "state management")
 
         hook_code = _generate_hook(hook_name, logic)
@@ -182,6 +264,7 @@ def execute_frontend_agent(task_input: dict[str, Any]) -> dict[str, Any]:
         "files_created": files_created,
         "output": f"✅ 前端任务完成：生成 {len(files_created)} 个文件",
         "timestamp": time.time(),
+        "quality_score": _assess_quality(files_created, task_type),
     }
 
 
@@ -210,7 +293,7 @@ def execute_architect_agent(task_input: dict[str, Any]) -> dict[str, Any]:
 
     elif task_type == "config":
         # 配置文件（package.json, .env.example等）
-        project_name = task_input.get("project_name", "loop-agent-project")
+        project_name = sanitize_identifier(task_input.get("project_name", "loop-agent-project"))
         dependencies = task_input.get("dependencies", {})
 
         package_json = _generate_package_json(project_name, dependencies)
@@ -239,6 +322,7 @@ def execute_architect_agent(task_input: dict[str, Any]) -> dict[str, Any]:
         "files_created": files_created,
         "output": f"✅ 架构任务完成：生成 {len(files_created)} 个文件",
         "timestamp": time.time(),
+        "quality_score": _assess_quality(files_created, task_type),
     }
 
 
@@ -292,6 +376,7 @@ def execute_requirements_agent(task_input: dict[str, Any]) -> dict[str, Any]:
         "files_created": files_created,
         "output": f"✅ 需求分析完成：生成 {len(files_created)} 个文档",
         "timestamp": time.time(),
+        "quality_score": _assess_quality(files_created, task_type),
     }
 
 
@@ -342,6 +427,7 @@ def execute_tester_agent(task_input: dict[str, Any]) -> dict[str, Any]:
         "files_created": files_created,
         "output": f"✅ 测试任务完成：生成 {len(files_created)} 个测试文件",
         "timestamp": time.time(),
+        "quality_score": _assess_quality(files_created, task_type),
     }
 
 
@@ -386,6 +472,7 @@ def execute_devops_agent(task_input: dict[str, Any]) -> dict[str, Any]:
         "files_created": files_created,
         "output": f"✅ DevOps任务完成：生成 {len(files_created)} 个配置文件",
         "timestamp": time.time(),
+        "quality_score": _assess_quality(files_created, task_type),
     }
 
 
@@ -839,15 +926,35 @@ def _generate_prd(product_name: str, features: list, user_stories: list) -> str:
 
 def _generate_user_stories(stories: list) -> str:
     """生成用户故事文档。"""
-    return f'''# 用户故事列表
+    lines: list[str] = []
+    lines.append("# 用户故事列表")
+    lines.append("")
+    lines.append(f"> 自动生成于 {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    lines.append("")
 
-> 自动生成于 {time.strftime('%Y-%m-%d %H:%M:%S')}
+    story_items: list[str] = []
+    for i, s in enumerate(stories or []):
+        title = s.get("title", f"故事{i+1}")
+        role = s.get("role", "用户")
+        want = s.get("want", "")
+        benefit = s.get("benefit", "")
+        priority = s.get("priority", "P2")
+        acceptance = s.get("acceptance", "TBD")
+        story_items.append(
+            f"## {i+1}. {title}\n\n"
+            f"- **角色**: {role}\n"
+            f"- **期望**: {want}\n"
+            f"- **价值**: {benefit}\n"
+            f"- **优先级**: {priority}\n"
+            f"- **验收标准**: {acceptance}\n"
+        )
 
-{"\n---\n".join([
-    f'## {i+1}. {s.get("title", f"故事{i+1}")}\n\n- **角色**: {s.get("role", "用户")}\n- **期望**: {s.get("want", "")}\n- **价值**: {s.get("benefit", "")}\n- **优先级**: {s.get("priority", "P2")}\n- **验收标准**: {s.get("acceptance", "TBD")}\n'
-    for i, s in enumerate(stories or [])
-]) or "暂无用户故事"}
-'''
+    if story_items:
+        lines.append("\n---\n".join(story_items))
+    else:
+        lines.append("暂无用户故事")
+
+    return "\n".join(lines)
 
 
 def _generate_acceptance_criteria(criteria: list) -> str:
@@ -1198,8 +1305,27 @@ EXECUTOR_MAP: dict[str, callable] = {
 }
 
 
+# v1.3 扩展：支持从 executors 包中查找已注册的 BaseExecutor
+def _try_registered_executor(agent_name: str):
+    """尝试从 executors 包获取已注册的执行器（v1.3+ 插件扩展点）。"""
+    try:
+        from loop_agent_mcp.executors import get_executor_class
+        cls = get_executor_class(agent_name)
+        if cls is not None:
+            return cls().execute
+    except (ImportError, AttributeError):
+        pass
+    return None
+
+
 def execute_agent(agent_name: str, task_input: dict[str, Any]) -> dict[str, Any]:
     """统一执行入口：根据agent_name路由到对应执行器。
+
+    优先级（v1.3+）：
+    1. executors 包中已注册的 BaseExecutor 子类（插件扩展点）
+    2. EXECUTOR_MAP 中的内置执行器
+    3. hint_only lambda（10个提示类角色）
+    4. 错误：未知角色
 
     Args:
         agent_name: 角色名称
@@ -1208,7 +1334,11 @@ def execute_agent(agent_name: str, task_input: dict[str, Any]) -> dict[str, Any]
     Returns:
         包含 execution_status, files_created, output 的结果字典
     """
-    executor = EXECUTOR_MAP.get(agent_name)
+    # 1. 优先查找插件注册的执行器
+    executor = _try_registered_executor(agent_name)
+    # 2. 回退到内置 EXECUTOR_MAP
+    if executor is None:
+        executor = EXECUTOR_MAP.get(agent_name)
 
     if executor is None:
         return {
@@ -1219,13 +1349,25 @@ def execute_agent(agent_name: str, task_input: dict[str, Any]) -> dict[str, Any]
 
     try:
         result = executor(task_input)
+        # v1.3: 标准化结果（兼容 ExecutionResult 和 dict 两种返回类型）
+        if hasattr(result, "to_dict"):
+            result = result.to_dict()
         result["agent"] = agent_name
         result["executed_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
         return result
+    except ValueError as e:
+        return {
+            "status": "error",
+            "agent": agent_name,
+            "error": f"输入验证失败: {e}",
+            "execution_failed": True,
+        }
     except Exception as e:
+        import traceback
         return {
             "status": "error",
             "agent": agent_name,
             "error": str(e),
             "execution_failed": True,
+            "traceback": traceback.format_exc(),
         }

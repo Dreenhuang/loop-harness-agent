@@ -19,6 +19,29 @@ api.interceptors.response.use(
   (response) => response.data,
   (error) => {
     console.error('API Error:', error);
+
+    // 通过自定义事件把错误派发给 NotificationProvider，避免 axios 拦截器内无法使用 Hook
+    if (typeof window !== 'undefined') {
+      let messageText: string;
+      let statusCode: number | undefined;
+
+      if (error.response) {
+        statusCode = error.response.status;
+        const data = error.response.data as { message?: string; detail?: string; msg?: string } | undefined;
+        messageText = data?.message || data?.detail || data?.msg || `服务器错误 (${statusCode})`;
+      } else if (error.request) {
+        messageText = '网络连接失败，请检查后端服务是否运行';
+      } else {
+        messageText = error.message || '请求异常';
+      }
+
+      window.dispatchEvent(
+        new CustomEvent('mcp-api-error', {
+          detail: { message: messageText, statusCode, original: error },
+        })
+      );
+    }
+
     return Promise.reject(error);
   }
 );
@@ -62,15 +85,15 @@ const projectService = {
 // ==================== System Service ====================
 
 const systemService = {
-  async start(): Promise<ApiResponse> {
+  async start(): Promise<ApiResponse<{ status: string }>> {
     return api.post('/system/start');
   },
 
-  async stop(force = false): Promise<ApiResponse> {
+  async stop(force = false): Promise<ApiResponse<{ status: string }>> {
     return api.post('/system/stop', { force });
   },
 
-  async restart(): Promise<ApiResponse> {
+  async restart(): Promise<ApiResponse<{ status: string }>> {
     return api.post('/system/restart');
   },
 

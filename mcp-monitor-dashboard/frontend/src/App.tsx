@@ -3,9 +3,10 @@
  */
 
 import React from 'react';
-import { ConfigProvider, theme } from 'antd';
+import { ConfigProvider, App as AntdApp, theme } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import Dashboard from '@/pages/Dashboard';
+import { NotificationProvider } from '@/components/feedback';
 import './styles/globals.css';
 
 const App: React.FC = () => {
@@ -27,7 +28,11 @@ const App: React.FC = () => {
         },
       }}
     >
-      <Dashboard />
+      <AntdApp>
+        <NotificationProvider>
+          <Dashboard />
+        </NotificationProvider>
+      </AntdApp>
     </ConfigProvider>
   );
 };

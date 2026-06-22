@@ -12,7 +12,8 @@ from app.config import settings
 from app.core.database import init_db
 from app.core.scheduler import start_scheduler, stop_scheduler
 from app.api.router import api_router
-from app.websocket.manager import websocket_router
+from app.websocket.manager import websocket_router, manager
+from app.services.data_collector import collector_service
 
 # Configure logging
 logging.basicConfig(
@@ -28,6 +29,7 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting MCP Monitor Dashboard...")
     await init_db()
+    collector_service.initialize_default_agents()
     start_scheduler()
     await manager.start_heartbeat()  # Start WebSocket heartbeat
     logger.info("MCP Monitor Dashboard started successfully")

@@ -1,35 +1,154 @@
-# Loop Agent 系统 .gitignore
+# Loop-Harness-Agent .gitignore
+# ==============================================
+# 安全优先级（按重要程度排序）：
+# 1. 敏感凭证与隐私数据
+# 2. 运行时临时数据
+# 3. 编译/构建产物
+# 4. 编辑器/IDE 临时文件
+# ==============================================
 
-# 黑板运行时数据（不应提交）
+# === 1. 敏感凭证与隐私数据 ===
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_rsa.pub
+secrets/
+credentials/
+
+# === 2. 运行时临时数据 ===
+# Loop Agent 黑板运行时（不应提交）
 .blackboard/
-*.bak.md
+.loop-agent-state/
+.loop-agent-tasks/
+.workbuddy/
+loop-agent-mcp/blackboard/
+blackboard/state.json
 工作树/
 .worktrees/
+*.bak.md
+*.tmp
 
-# 编辑器
+# 临时调试/测试文件
+.tmp_pydantic/
+*.echo-test.txt
+*.ps-test.txt
+*.py-info.txt
+*.py-test.txt
+*.py314-info.txt
+*.write-test.txt
+
+# === 3. Python 构建产物 ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+*.whl
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.pyc
+*.pyo
+pip-log.txt
+pip-delete-this-directory.txt
+
+# === 4. Node.js 构建产物 ===
+node_modules/
+.npm
+.eslintcache
+.node_repl_history
+*.tgz
+.yarn-integrity
+.pnp.*
+
+# === 5. 前端构建产物 ===
+.next/
+.nuxt/
+.vite/
+.cache/
+.parcel-cache/
+.turbo/
+coverage/
+*.tsbuildinfo
+
+# === 6. 部署文档（敏感信息已转储到 ENV） ===
+# DEPLOYMENT.md 与 FINAL_REVIEW_REPORT.md 含服务器 IP/SSH 私钥路径
+# 已从提交中排除，仅在私有部署场景下保留
+docs/mcp-monitor-dashboard/DEPLOYMENT.md
+docs/mcp-monitor-dashboard/FINAL_REVIEW_REPORT.md
+docs/mcp-monitor-dashboard/USER_MANUAL.md
+
+# === 7. 编辑器 / IDE ===
 .vscode/
 .idea/
 *.swp
+*.swo
+*~
 .DS_Store
+Thumbs.db
+*.iml
+*.iws
 
-# 系统临时
-node_modules/
-dist/
-build/
+# === 8. 系统日志 ===
 *.log
-.env
-.env.local
+logs/
+*.pid
+*.seed
+*.pid.lock
 
-# Trae IDE 临时
-.traesettings/
+# === 9. 测试产物 ===
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
 
-# 注意：以下应该提交（核心资产）
-# .trae/rules/loop-agent.md ✅
-# .trae/rules/A2A消息速查卡.md ✅
-# .trae/skills/ ✅
-# .trae/agents/ ✅
-# .trae/workflows/ ✅
-# .trae/commands/ ✅
-# blackboard/templates/ ✅
-# domain-chips/ ✅
-# README.md ✅
+# === 10. Trae IDE 临时 ===
+# 注意：只忽略临时目录，不能忽略整个 .trae/
+# .trae/skills/、.trae/agents/、.trae/workflows/、.trae/rules/、.trae/commands/ 是核心资产
+.trae-cli/
+.trae_runtime/
+.trae-userdata/
+.trae-settings/
+.trae_cache/
+
+# === 11. 用户级临时文件 ===
+*.bak
+*.orig
+*.rej
+*.patch
+*.diff
+
+# ==============================================
+# 注意：以下核心资产应该提交（不要 ignore）
+# ==============================================
+# .trae/skills/              ✅ Skill 原子能力
+# .trae/agents/              ✅ Agent Profile
+# .trae/workflows/           ✅ Workflow Blueprint
+# .trae/rules/               ✅ 规则文档
+# .trae/commands/            ✅ 斜杠命令
+# blackboard/templates/      ✅ 黑板模板
+# domain-chips/              ✅ Domain Chip
+# loop-agent-mcp/            ✅ MCP Server 实现
+# mcp-monitor-dashboard/     ✅ 监控 Dashboard 项目
+# docs/architecture/         ✅ 架构文档
+# docs/integration/          ✅ 融合验收标准
+# README.md / CHANGELOG.md   ✅ 项目说明

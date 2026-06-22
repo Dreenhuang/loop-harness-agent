@@ -580,18 +580,43 @@ class MCPTestSuite:
             expected_status="error",
         ))
 
-        # 3.3 权限模拟（只读路径）- Windows下可能成功或失败
+        # 3.3 路径遍历攻击防护验证（v1.3 新增）
         cases.append(TestCase(
             id="EXCP-003",
-            name="异常测试 - 权限不足模拟(平台相关)",
+            name="异常测试 - 路径遍历攻击防护(v1.3安全加固)",
             category="异常处理",
             tool_name="write_file",
             arguments={
-                "path": "/root/protected/file.txt",
-                "content": "权限测试"
+                "path": "../../etc/passwd",  # 路径遍历攻击
+                "content": "hacked"
             },
-            expected_status="ok",  # Windows下通常成功（无真正的/root限制）
-            expected_keys=["status", "path"],
+            expected_status="error",  # v1.3: 必须被阻止
+        ))
+
+        # 3.4 危险扩展名阻止验证（v1.3 新增）
+        cases.append(TestCase(
+            id="EXCP-004",
+            name="异常测试 - 危险扩展名阻止(v1.3安全加固)",
+            category="异常处理",
+            tool_name="write_file",
+            arguments={
+                "path": "virus.bat",
+                "content": "malicious"
+            },
+            expected_status="error",  # v1.3: .bat被禁止
+        ))
+
+        # 3.5 绝对路径阻止验证（v1.3 新增）
+        cases.append(TestCase(
+            id="EXCP-005",
+            name="异常测试 - 绝对路径阻止(v1.3安全加固)",
+            category="异常处理",
+            tool_name="write_file",
+            arguments={
+                "path": "/etc/passwd",
+                "content": "hacked"
+            },
+            expected_status="error",  # v1.3: 绝对路径被禁止
         ))
 
         # ========== 4. 提示类角色测试 ==========

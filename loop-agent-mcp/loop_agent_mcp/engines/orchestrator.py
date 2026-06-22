@@ -48,8 +48,14 @@ def start_loop(
 ) -> dict[str, Any]:
     """启动一个新 Loop。"""
     ws = workspace or find_workspace_root()
-    StateManager.get().state.reset()
-    StateManager.get().mutate(
+    sm = StateManager.get()
+
+    # v1.3: 初始化持久化（首次调用时从磁盘恢复最新 Loop）
+    sm.init_persistence(ws)
+
+    # 重置状态（会生成新 loop_id，mutate 会同步 _states 字典）
+    sm.mutate(lambda s: s.reset())
+    sm.mutate(
         lambda s: (
             setattr(s, "mode", mode),
             setattr(s, "time_budget_hours", time_budget_hours),
@@ -60,28 +66,72 @@ def start_loop(
     # 一次性加载资产（供工具调用时复用）
     workspace_assets = _load_workspace_assets(ws)
     return {
-        "loop_id": StateManager.get().state.loop_id,
+        "loop_id": sm.state.loop_id,
         "mode": mode,
         "time_budget_hours": time_budget_hours,
         "workspace": str(ws),
-        "started_at": StateManager.get().state.started_at,
-        "current_phase": StateManager.get().state.current_phase,
+        "started_at": sm.state.started_at,
+        "current_phase": sm.state.current_phase,
         "assets_loaded": {k: bool(v.get("_loaded", True)) for k, v in workspace_assets.items()},
     }
 
 
 def resume_loop(workspace: Path | None = None) -> dict[str, Any]:
-    """恢复一个未完成的 Loop（从黑板状态恢复）。"""
+    """恢复一个未完成的 Loop（v1.3: 从持久化状态真正恢复）。
+
+    之前的实现是假的：注释自认"简化"，实际调用 state.reset() 丢弃所有进度。
+    现在真正从 .loop-agent-state/*.json 恢复最新 Loop 的完整状态。
+    """
     ws = workspace or find_workspace_root()
-    # 从黑板读取最近状态
-    bb = bb_engine.read_blackboard(ws)
-    if not bb:
+    sm = StateManager.get()
+
+    # 初始化持久化
+    sm.init_persistence(ws)
+
+    # 获取最新保存的 Loop
+    if sm._persistence is None:
         return {
-            "status": "no_blackboard",
-            "message": "黑板不存在，无法恢复，请使用 start_loop 启动新流程",
+            "status": "no_persistence",
+            "message": "持久化未初始化",
         }
-    # 简化：直接 reset 并尝试回到 Phase 0（实际应解析黑板进度）
-    return start_loop(ws, mode="resume")
+
+    latest = sm._persistence.get_latest_loop()
+    if latest is None:
+        return {
+            "status": "no_saved_state",
+            "message": "无已保存的状态，请使用 start_loop 启动新流程",
+        }
+
+    loop_id = latest.get("_loop_id", latest.get("loop_id", ""))
+    if not loop_id:
+        return {
+            "status": "invalid_saved_state",
+            "message": "已保存的状态文件无 loop_id",
+        }
+
+    # 恢复状态
+    success = sm.switch_loop(loop_id)
+    if not success:
+        return {
+            "status": "restore_failed",
+            "message": f"无法恢复 Loop {loop_id}",
+        }
+
+    state = sm.state
+    return {
+        "status": "resumed",
+        "loop_id": loop_id,
+        "mode": "resume",
+        "current_phase": state.current_phase,
+        "iterations": state.iterations,
+        "gate_status": state.gate_status,
+        "artifact_status": state.artifact_status,
+        "evidence_status": state.evidence_status,
+        "completed_tasks": state.completed_tasks,
+        "active_tasks": state.active_tasks,
+        "saved_at": latest.get("_saved_at", "unknown"),
+        "message": f"✅ 已恢复 Loop {loop_id}，当前在 {state.current_phase}（已执行 {state.iterations} 次迭代）",
+    }
 
 
 def abort_loop(reason: str = "user_abort") -> dict[str, Any]:
@@ -155,8 +205,16 @@ def list_agents(workspace: Path | None = None) -> dict[str, Any]:
     }
 
 
-def spawn_agent(agent_name: str, task_input: dict[str, Any]) -> dict[str, Any]:
-    """派发任务给指定 Agent。"""
+def spawn_agent(
+    agent_name: str,
+    task_input: dict[str, Any],
+    task_id: str | None = None,
+) -> dict[str, Any]:
+    """派发任务给指定 Agent。
+
+    v1.4: 仅保留状态更新职责，不再直接触发执行。
+    状态更新由 StateManager.mutate 锁保护，线程安全。
+    """
     if agent_name not in ROLE_NAMES:
         raise ValueError(f"unknown agent: {agent_name}")
     workspace = Path(StateManager.get().state.workspace or find_workspace_root())
@@ -165,13 +223,15 @@ def spawn_agent(agent_name: str, task_input: dict[str, Any]) -> dict[str, Any]:
 
     def _op(s):
         s.current_role = agent_name
-        s.active_tasks.append(f"{agent_name}:{int(time.time())}")
+        task_marker = task_id if task_id else f"{agent_name}:{int(time.time())}"
+        s.active_tasks.append(task_marker)
         s.last_action = f"spawn_agent:{agent_name}"
     StateManager.get().mutate(_op)
 
     return {
         "spawned_to": agent_name,
         "task_input": task_input,
+        "task_id": task_id,
         "harness_discipline_applied": bool(hd),
         "role_type": hd.get("role_type", "unknown"),
         "mandatory_checks": hd.get("mandatory_checks", {}),

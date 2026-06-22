@@ -293,6 +293,47 @@ class TestWebSocketManager:
 
 # ==================== 3. Data Collector Tests ====================
 
+class TestWebSocketIntegration:
+    """Integration tests for the WebSocket endpoint."""
+
+    def test_websocket_connect_and_subscribe(self):
+        """First connection should accept, then receive init on subscribe."""
+        from fastapi.testclient import TestClient
+        from app.main import app
+
+        client = TestClient(app)
+        with client.websocket_connect("/ws") as ws:
+            ws.send_json({"type": "subscribe", "channels": ["agent_status", "overview"]})
+            msg = ws.receive_json()
+
+            assert msg["type"] == "init"
+            assert "data" in msg
+            assert "agents" in msg["data"]
+            assert "overview" in msg["data"]
+
+    def test_websocket_ping_pong(self):
+        """Server should respond with pong to client ping."""
+        from fastapi.testclient import TestClient
+        from app.main import app
+
+        client = TestClient(app)
+        with client.websocket_connect("/ws") as ws:
+            ws.send_json({"type": "ping"})
+            msg = ws.receive_json()
+            assert msg["type"] == "pong"
+
+    def test_websocket_rejects_invalid_json(self):
+        """Server should send error for invalid JSON without crashing."""
+        from fastapi.testclient import TestClient
+        from app.main import app
+
+        client = TestClient(app)
+        with client.websocket_connect("/ws") as ws:
+            ws.send_text("not-json")
+            msg = ws.receive_json()
+            assert msg["type"] == "error"
+
+
 class TestDataCollectorService:
     """Test data collection service."""
 

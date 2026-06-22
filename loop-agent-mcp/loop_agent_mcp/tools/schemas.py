@@ -39,7 +39,7 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
     },
     {
         "name": "spawn_agent",
-        "description": "向指定 Agent 派发任务。",
+        "description": "向指定 Agent 派发任务。支持同步等待（默认）或异步并行（async=true）。",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -50,8 +50,34 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                     "knowledge-curator", "documenter", "final-reviewer", "devops",
                 ]},
                 "task_input": {"type": "object", "default": {}},
+                "async": {"type": "boolean", "default": False, "description": "是否异步提交，提交后立即返回 task_id"},
+                "priority": {"type": "integer", "default": 5, "minimum": 1, "maximum": 10, "description": "任务优先级，数值越小优先级越高"},
+                "dependencies": {"type": "array", "items": {"type": "string"}, "default": [], "description": "依赖的 task_id 列表，必须全部成功后才开始"},
+                "timeout": {"type": "number", "default": 600, "minimum": 1, "description": "任务超时时间（秒）"},
             },
             "required": ["agent_name"],
+        },
+    },
+    {
+        "name": "cancel_task",
+        "description": "取消一个已提交但未完成的任务。",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "task_id": {"type": "string", "description": "任务 ID"},
+            },
+            "required": ["task_id"],
+        },
+    },
+    {
+        "name": "get_task_status",
+        "description": "查询指定任务的当前状态与结果摘要。",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "task_id": {"type": "string", "description": "任务 ID"},
+            },
+            "required": ["task_id"],
         },
     },
     {
